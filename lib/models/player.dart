@@ -21,11 +21,12 @@ class Player {
   };
 
   factory Player.fromJson(Map<String, dynamic> json) => Player(
-    id: json['id'],
-    name: json['name'],
-    hand: (json['hand'] as List)
-        .map((card) => Cards.fromJson(card))
-        .toList(),
+    id: json['id'] ?? '',
+    name: json['name'] ?? 'Unknown',
+    hand: (json['hand'] as List<dynamic>?)
+        ?.map((card) => Cards.fromJson(card as Map<String, dynamic>))
+        .toList() ??
+        [],
     title: json['title'],
   );
 }

@@ -8,23 +8,25 @@ class WebSocketService with ChangeNotifier {
   Game? game;
   String? error;
 
-
   WebSocketService() {
-    socket = IO.io('http://192.168.8.181:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
 
     socket.onConnect((_) {
       print('Socket connected');
+      notifyListeners();
     });
+
     socket.onConnectError((data) {
       print('Connect error: $data');
       error = 'Connection failed: $data';
       notifyListeners();
     });
-    socket.on('update', (data) {
-      print('Received update: $data');
+
+    socket.on('gameUpdate', (data) {
+      print('Received gameUpdate: $data');
       try {
         game = Game.fromJson(data);
         error = null;
@@ -35,23 +37,21 @@ class WebSocketService with ChangeNotifier {
       notifyListeners();
     });
 
-
-
-
     socket.on('error', (data) {
       print('Received error: $data');
       error = data.toString();
       notifyListeners();
     });
-
-
   }
 
   void connect() {
     socket.connect();
   }
 
-
+  void requestGameState(String gameId) {
+    print('Requesting game state for $gameId');
+    socket.emit('requestGameState', {'gameId': gameId});
+  }
 
   void joinGame(String gameId, String playerId, String playerName, {bool isTestMode = false}) {
     print('Joining game: $gameId, player: $playerId, test: $isTestMode');
@@ -62,11 +62,17 @@ class WebSocketService with ChangeNotifier {
       'isTestMode': isTestMode,
     });
   }
+  void startGame(String gameId, String playerId) {
+    print('Starting game: $gameId, player: $playerId');
+    socket.emit('startGame', {
+      'gameId': gameId,
+      'playerId': playerId,
+    });
+  }
 
   void playPattern(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {
-    // Fix: Send hand order to preserve playing player's order
-    print('WebSocket: Sending playPattern with hand order: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
-    socket!.emit('playPattern', {
+    print('WebSocket: Sending playPattern with cards: ${cards.map((c) => c.isJoker ? "${c.assignedRank} of ${c.assignedSuit}" : "${c.rank} of ${c.suit}").toList()}');
+    socket.emit('playPattern', {
       'gameId': gameId,
       'playerId': playerId,
       'cards': cards.map((c) => c.toJson()).toList(),
@@ -75,18 +81,16 @@ class WebSocketService with ChangeNotifier {
   }
 
   void pass(String gameId, String playerId) {
-    // Fix Bug 2: Log pass action
     print('WebSocket: Sending pass for player $playerId in game $gameId');
-    socket!.emit('pass', {
+    socket.emit('pass', {
       'gameId': gameId,
       'playerId': playerId,
     });
   }
 
   void takeChance(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {
-    // Fix: Send hand order to preserve playing player's order
-    print('WebSocket: Sending takeChance with hand order: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
-    socket!.emit('takeChance', {
+    print('WebSocket: Sending takeChance with cards: ${cards.map((c) => c.isJoker ? "${c.assignedRank} of ${c.assignedSuit}" : "${c.rank} of ${c.suit}").toList()}');
+    socket.emit('takeChance', {
       'gameId': gameId,
       'playerId': playerId,
       'cards': cards.map((c) => c.toJson()).toList(),
@@ -94,33 +98,18 @@ class WebSocketService with ChangeNotifier {
     });
   }
 
-  // Fix: Sync hand order after drag-and-drop
   void updateHandOrder(String gameId, String playerId, List<Cards> hand) {
     print('WebSocket: Sending updateHandOrder with hand: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
-    socket!.emit('updateHandOrder', {
+    socket.emit('updateHandOrder', {
       'gameId': gameId,
       'playerId': playerId,
       'hand': hand.map((c) => c.toJson()).toList(),
     });
   }
 
-  // Improvement 1: Notify Joker assignment
-  void notifyJokerAssignment(String gameId, String playerName, String jokerSuit, String assignedRank, String assignedSuit) {
-    print('WebSocket: Sending jokerAssignment for $playerName: $jokerSuit as $assignedRank of $assignedSuit');
-    socket!.emit('notifyJokerAssignment', {
-      'gameId': gameId,
-      'playerName': playerName,
-      'jokerSuit': jokerSuit,
-      'assignedRank': assignedRank,
-      'assignedSuit': assignedSuit,
-    });
-  }
-
-
-
   @override
   void dispose() {
-    socket!.dispose();
+    socket.dispose();
     super.dispose();
   }
 }
