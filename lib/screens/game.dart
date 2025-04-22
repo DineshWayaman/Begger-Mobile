@@ -19,76 +19,195 @@ class GameScreen extends StatefulWidget {
   _GameScreenState createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
   List<Cards> selectedCards = [];
-  String? roundMessage;
   final ScrollController _scrollController = ScrollController();
   bool _showScrollThumb = false;
   List<Cards> _lastSentHand = [];
   String? _lastJokerMessage;
+  final Set<String> _shownMessages = {};
+  bool _isDialogShowing = false;
+  bool _hasShownNewRoundMessage = false;
+  bool _showNewRoundNotification = false;
+  AnimationController? _notificationController;
+  Animation<Offset>? _notificationAnimation;
+  String? _newRoundMessage;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateScrollThumbVisibility();
-      Provider.of<WebSocketService>(context, listen: false).requestGameState(widget.gameId);
+    _notificationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _notificationAnimation = Tween<Offset>(
+      begin: const Offset(0, -5),
+      end: const Offset(0, 0),
+    ).animate(CurvedAnimation(
+      parent: _notificationController!,
+      curve: Curves.easeInOut,
+    ));
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _updateScrollThumbVisibility();
     });
     _scrollController.addListener(_updateScrollThumbVisibility);
-    Provider.of<WebSocketService>(context, listen: false).addListener(_onGameStateChanged);
+    Provider.of<WebSocketService>(context, listen: false)
+        .addListener(_onGameStateChanged);
+  }
+
+  @override
+  void didUpdateWidget(GameScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _showGameMessages();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    Provider.of<WebSocketService>(context, listen: false).removeListener(_onGameStateChanged);
+    _notificationController?.dispose();
+    Provider.of<WebSocketService>(context, listen: false)
+        .removeListener(_onGameStateChanged);
     super.dispose();
   }
 
   void _onGameStateChanged() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     final game = ws.game;
-    if (game == null || game.pile.isEmpty) return;
+    if (game == null) {
+      _showGameMessages();
+      return;
+    }
 
-    final lastPlay = game.pile.last;
-    final player = game.lastPlayedPlayerId != null
-        ? game.players.firstWhere(
-          (p) => p.id == game.lastPlayedPlayerId,
-      orElse: () => Player(id: '', name: 'Unknown', hand: []),
-    )
-        : null;
+    // Check for game start to show new round notification
+    if (!_hasShownNewRoundMessage && game.status != 'waiting' && game.pile.isEmpty && game.passCount == 0) {
+      final starter = game.players[game.currentTurn];
+      final message = 'New Round Started! ${starter.name} begins!';
+      if (!_shownMessages.contains(message)) {
+        _shownMessages.add(message);
+        _hasShownNewRoundMessage = true;
+        setState(() {
+          _newRoundMessage = message;
+          _showNewRoundNotification = true;
+          _notificationController?.forward();
+        });
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              _notificationController?.reverse().then((_) {
+                _showNewRoundNotification = false;
+                _newRoundMessage = null;
+                _hasShownNewRoundMessage = false; // Reset to allow new round message
+              });
+            });
+          }
+        });
+      }
+    }
 
-    if (player == null || player.id == '' || player.id == widget.playerId) return;
+    // Handle joker messages
+    if (game.pile.isNotEmpty) {
+      final lastPlay = game.pile.last;
+      final player = game.lastPlayedPlayerId != null
+          ? game.players.firstWhere(
+            (p) => p.id == game.lastPlayedPlayerId,
+        orElse: () => Player(id: '', name: 'Unknown', hand: []),
+      )
+          : null;
 
-    final jokerCards = lastPlay.where((c) => c.isJoker).toList();
-    if (jokerCards.isEmpty) return;
+      if (player != null && player.id != '' && player.id != widget.playerId) {
+        final jokerCards = lastPlay.where((c) => c.isJoker).toList();
+        if (jokerCards.isNotEmpty) {
+          final jokerMessage = jokerCards.length == 1
+              ? '${player.name} played Joker as ${jokerCards[0].assignedRank} of ${jokerCards[0].assignedSuit}'
+              : '${player.name} played Jokers: ${jokerCards.map((c) => '${c.assignedRank} of ${c.assignedSuit}').join(', ')}';
 
-    final jokerMessage = jokerCards.length == 1
-        ? '${player.name} played Joker as ${jokerCards[0].assignedRank} of ${jokerCards[0].assignedSuit}'
-        : '${player.name} played Jokers: ${jokerCards.map((c) => '${c.assignedRank} of ${c.assignedSuit}').join(', ')}';
+          if (jokerMessage != _lastJokerMessage) {
+            _lastJokerMessage = jokerMessage;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(jokerMessage, style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.blueAccent,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            });
+          }
+        }
+      }
+    }
 
-    if (jokerMessage != _lastJokerMessage) {
-      _lastJokerMessage = jokerMessage;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(jokerMessage, style: GoogleFonts.poppins()),
-            backgroundColor: Colors.blueAccent,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      });
+    _showGameMessages();
+  }
+
+  void _showGameMessages() {
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    final game = ws.game;
+    if (game == null || _isDialogShowing) return;
+
+    // Title message
+    final titledPlayers = game.players.where((p) => p.title != null).toList();
+    if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
+      final message =
+      titledPlayers.map((p) => '${p.name}: ${p.title}').join(', ');
+      if (!_shownMessages.contains(message)) {
+        _shownMessages.add(message);
+        _showTitleDialog(message, const Duration(seconds: 5));
+      }
     }
   }
 
+  void _showTitleDialog(String message, Duration duration) {
+    if (_isDialogShowing || !mounted) return;
+    _isDialogShowing = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: Colors.green,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          content: Text(
+            message,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ).then((_) {
+        _isDialogShowing = false;
+      });
+
+      Future.delayed(duration, () {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+    });
+  }
+
   void _updateScrollThumbVisibility() {
-    if (!_scrollController.hasClients) {
-      setState(() => _showScrollThumb = false);
-      return;
-    }
-    final maxScrollExtent = _scrollController.position.maxScrollExtent;
-    setState(() {
-      _showScrollThumb = maxScrollExtent > 0;
+    if (!_scrollController.hasClients || !mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients || !mounted) return;
+
+      final maxScrollExtent = _scrollController.position.maxScrollExtent;
+      final newVisibility = maxScrollExtent > 0;
+
+      if (newVisibility != _showScrollThumb) {
+        setState(() {
+          _showScrollThumb = newVisibility;
+        });
+      }
     });
   }
 
@@ -149,10 +268,28 @@ class _GameScreenState extends State<GameScreen> {
                               ),
                             ),
                             value: selectedRank,
-                            items: ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
-                                .map((rank) => DropdownMenuItem(value: rank, child: Text(rank, style: GoogleFonts.poppins())))
+                            items: [
+                              '3',
+                              '4',
+                              '5',
+                              '6',
+                              '7',
+                              '8',
+                              '9',
+                              '10',
+                              'J',
+                              'Q',
+                              'K',
+                              'A',
+                              '2'
+                            ]
+                                .map((rank) => DropdownMenuItem(
+                              value: rank,
+                              child: Text(rank, style: GoogleFonts.poppins()),
+                            ))
                                 .toList(),
-                            onChanged: (value) => setDialogState(() => selectedRank = value),
+                            onChanged: (value) =>
+                                setDialogState(() => selectedRank = value),
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
@@ -168,9 +305,13 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             value: selectedSuit,
                             items: ['hearts', 'diamonds', 'clubs', 'spades']
-                                .map((suit) => DropdownMenuItem(value: suit, child: Text(suit, style: GoogleFonts.poppins())))
+                                .map((suit) => DropdownMenuItem(
+                              value: suit,
+                              child: Text(suit, style: GoogleFonts.poppins()),
+                            ))
                                 .toList(),
-                            onChanged: (value) => setDialogState(() => selectedSuit = value),
+                            onChanged: (value) =>
+                                setDialogState(() => selectedSuit = value),
                           ),
                           const SizedBox(height: 20),
                           Row(
@@ -180,7 +321,9 @@ class _GameScreenState extends State<GameScreen> {
                                 onPressed: () => Navigator.of(dialogContext).pop(),
                                 child: Text(
                                   'Cancel',
-                                  style: GoogleFonts.poppins(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ),
                               ElevatedButton(
@@ -199,12 +342,16 @@ class _GameScreenState extends State<GameScreen> {
                                     : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blueAccent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
                                 ),
                                 child: Text(
                                   'OK',
-                                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ),
                             ],
@@ -221,12 +368,15 @@ class _GameScreenState extends State<GameScreen> {
       );
 
       if (assignedCard == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Joker assignment cancelled', style: GoogleFonts.poppins()),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Joker assignment cancelled',
+                  style: GoogleFonts.poppins()),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
         return null;
       }
       assignedCards.add(assignedCard);
@@ -239,18 +389,28 @@ class _GameScreenState extends State<GameScreen> {
     if (cards.isEmpty) return '';
     final hasJoker = cards.any((c) => c.isJoker);
     final firstCard = cards[0];
-    final effectiveRank = firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
-    final effectiveSuit = firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
+    final effectiveRank =
+    firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
+    final effectiveSuit =
+    firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
 
     if (pattern == 'single') {
       if (firstCard.isDetails) return 'Details Card';
-      return hasJoker ? 'Joker as $effectiveRank of $effectiveSuit' : 'Single: $effectiveRank of $effectiveSuit';
+      return hasJoker
+          ? 'Joker as $effectiveRank of $effectiveSuit'
+          : 'Single: $effectiveRank of $effectiveSuit';
     } else if (pattern == 'pair') {
-      return hasJoker ? 'Joker Pair: Two $effectiveRank\'s' : 'Pair: Two $effectiveRank\'s';
+      return hasJoker
+          ? 'Joker Pair: Two $effectiveRank\'s'
+          : 'Pair: Two $effectiveRank\'s';
     } else if (pattern == 'group-3') {
-      return hasJoker ? 'Joker Three: Three $effectiveRank\'s' : 'Three of a kind: Three $effectiveRank\'s';
+      return hasJoker
+          ? 'Joker Three: Three $effectiveRank\'s'
+          : 'Three of a kind: Three $effectiveRank\'s';
     } else if (pattern == 'group-4') {
-      return hasJoker ? 'Joker Four: Four $effectiveRank\'s' : 'Four of a kind: Four $effectiveRank\'s';
+      return hasJoker
+          ? 'Joker Four: Four $effectiveRank\'s'
+          : 'Four of a kind: Four $effectiveRank\'s';
     } else if (pattern == 'consecutive') {
       final sortedCards = cards
         ..sort((a, b) {
@@ -271,24 +431,32 @@ class _GameScreenState extends State<GameScreen> {
             'A': 14,
             '2': 15,
           };
-          return values[rankA!]! - values[rankB!]!;
+          final valueA = rankA != null ? values[rankA] ?? 0 : 0;
+          final valueB = rankB != null ? values[rankB] ?? 0 : 0;
+          return valueA - valueB;
         });
       final startCard = sortedCards.first;
       final startRank = startCard.isJoker ? startCard.assignedRank : startCard.rank;
-      final startSuit = startCard.isJoker ? startCard.assignedSuit : startCard.suit;
-      return hasJoker ? 'Joker Consecutive: Starting at $startRank of $startSuit' : 'Consecutive: Starting at $startRank of $startSuit';
+      final startSuit =
+      startCard.isJoker ? startCard.assignedSuit : startCard.suit;
+      return hasJoker
+          ? 'Joker Consecutive: Starting at $startRank of $startSuit'
+          : 'Consecutive: Starting at $startRank of $startSuit';
     }
     return '';
   }
 
   bool _validateDetailsCard(List<Cards> cards) {
     if (cards.any((c) => c.isDetails) && cards.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Details card can only be played alone', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Details card can only be played alone',
+                style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return false;
     }
     return true;
@@ -300,12 +468,14 @@ class _GameScreenState extends State<GameScreen> {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     final game = ws.game;
     if (game == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Game not loaded', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Game not loaded', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
 
@@ -315,28 +485,33 @@ class _GameScreenState extends State<GameScreen> {
     );
 
     if (player.id == 'Unknown') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Player not found in game', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Player not found in game', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
 
     final assignedCards = await _assignJokerValues(cards);
     if (assignedCards == null || assignedCards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Play cancelled', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Play cancelled', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
 
     final playedCardIds = assignedCards.map(_cardId).toList();
-    final remainingHand = player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
+    final remainingHand =
+    player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
 
     if (game.isTestMode) {
       setState(() {
@@ -345,20 +520,26 @@ class _GameScreenState extends State<GameScreen> {
         selectedCards = [];
         _lastSentHand = List.from(remainingHand);
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Played ${assignedCards.length} cards in test mode', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.green,
-        ),
-      );
-      ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Played ${assignedCards.length} cards in test mode',
+                style: GoogleFonts.poppins()),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      ws.playPattern(
+          widget.gameId, widget.playerId, assignedCards, remainingHand);
     } else {
       if (isTakeChance) {
-        ws.takeChance(widget.gameId, widget.playerId, assignedCards, remainingHand);
+        ws.takeChance(
+            widget.gameId, widget.playerId, assignedCards, remainingHand);
       } else {
-        ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
+        ws.playPattern(
+            widget.gameId, widget.playerId, assignedCards, remainingHand);
       }
-      if (ws.error != null) {
+      if (ws.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Play failed: ${ws.error}', style: GoogleFonts.poppins()),
@@ -378,25 +559,30 @@ class _GameScreenState extends State<GameScreen> {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     final game = ws.game;
     if (game == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Game not loaded', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Game not loaded', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
     if (game.isTestMode) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Passing not allowed in test mode', style: GoogleFonts.poppins()),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Passing not allowed in test mode',
+                style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
     ws.pass(widget.gameId, widget.playerId);
-    if (ws.error != null) {
+    if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Pass failed: ${ws.error}', style: GoogleFonts.poppins()),
@@ -404,7 +590,7 @@ class _GameScreenState extends State<GameScreen> {
         ),
       );
       ws.error = null;
-    } else {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Passed!', style: GoogleFonts.poppins()),
@@ -420,10 +606,11 @@ class _GameScreenState extends State<GameScreen> {
   void _handleStartGame() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.startGame(widget.gameId, widget.playerId);
-    if (ws.error != null) {
+    if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to start game: ${ws.error}', style: GoogleFonts.poppins()),
+          content: Text('Failed to start game: ${ws.error}',
+              style: GoogleFonts.poppins()),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -439,17 +626,23 @@ class _GameScreenState extends State<GameScreen> {
           final errorMessage = ws.error!;
           ws.error = null;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error: $errorMessage', style: GoogleFonts.poppins()),
-                backgroundColor: Colors.redAccent,
-              ),
-            );
-            if (errorMessage == 'Game is full' || errorMessage == 'Game has already started') {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LobbyScreen()),
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error: $errorMessage',
+                      style: GoogleFonts.poppins()),
+                  backgroundColor: Colors.redAccent,
+                ),
               );
+              if (errorMessage == 'Game is full' ||
+                  errorMessage == 'Game has already started') {
+                _hasShownNewRoundMessage = false;
+                _shownMessages.clear();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                );
+              }
             }
           });
         }
@@ -530,7 +723,7 @@ class _GameScreenState extends State<GameScreen> {
         final player = game.players.firstWhere(
               (p) => p.id == widget.playerId,
           orElse: () {
-            print('Player not found: ${widget.playerId}');
+            debugPrint('Player not found: ${widget.playerId}');
             return Player(id: widget.playerId, name: 'Unknown', hand: []);
           },
         );
@@ -561,6 +754,8 @@ class _GameScreenState extends State<GameScreen> {
                     ElevatedButton(
                       onPressed: () {
                         ws.connect();
+                        _hasShownNewRoundMessage = false;
+                        _shownMessages.clear();
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (_) => const LobbyScreen()),
@@ -568,8 +763,10 @@ class _GameScreenState extends State<GameScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                       child: Text(
                         'Return to Lobby',
@@ -586,45 +783,8 @@ class _GameScreenState extends State<GameScreen> {
           );
         }
 
-        final isMyTurn = game.isTestMode || game.players[game.currentTurn].id == widget.playerId;
-
-        // // Handle roundMessage for new rounds and titles
-        // WidgetsBinding.instance.addPostFrameCallback((_) {
-        //   if (game.pile.isEmpty && game.passCount == 0) {
-        //     final starter = game.players[game.currentTurn];
-        //     final message = 'New Round Started! ${starter.name} begins!';
-        //     if (message != roundMessage) {
-        //       ScaffoldMessenger.of(context).showSnackBar(
-        //         SnackBar(
-        //           content: Text(message, style: GoogleFonts.poppins()),
-        //           backgroundColor: Colors.green,
-        //           duration: const Duration(seconds: 3),
-        //         ),
-        //       );
-        //       setState(() => roundMessage = message);
-        //       Future.delayed(const Duration(seconds: 3), () {
-        //         if (mounted && roundMessage == message) setState(() => roundMessage = null);
-        //       });
-        //     }
-        //   }
-        //   final titledPlayers = game.players.where((p) => p.title != null).toList();
-        //   if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
-        //     final message = titledPlayers.map((p) => '${p.name}: ${p.title}').join(', ');
-        //     if (message != roundMessage) {
-        //       ScaffoldMessenger.of(context).showSnackBar(
-        //         SnackBar(
-        //           content: Text(message, style: GoogleFonts.poppins()),
-        //           backgroundColor: Colors.green,
-        //           duration: const Duration(seconds: 5),
-        //         ),
-        //       );
-        //       setState(() => roundMessage = message);
-        //       Future.delayed(const Duration(seconds: 5), () {
-        //         if (mounted && roundMessage == message) setState(() => roundMessage = null);
-        //       });
-        //     }
-        //   }
-        // });
+        final isMyTurn =
+            game.isTestMode || game.players[game.currentTurn].id == widget.playerId;
 
         return Scaffold(
           body: Container(
@@ -636,378 +796,443 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                child: Column(
-                  children: [
-                    if (game.isTestMode)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          'Single Player Test: Play cards to test UI',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontStyle: FontStyle.italic,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    if (game.pile.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getPatternMessage(game.pile.last, game.currentPattern),
-                            style: GoogleFonts.poppins(
-                              color: Colors.white70,
-                              fontStyle: FontStyle.italic,
-                              fontSize: 14,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                    child: Column(
+                      children: [
+                        if (game.isTestMode)
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Text(
+                              'Single Player Test: Play cards to test UI',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    const SizedBox(height: 10),
-                    if (!game.isTestMode)
-                      SizedBox(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: game.players.length,
-                          itemBuilder: (context, i) {
-                            final p = game.players[i];
-                            if (p.id == widget.playerId) return const SizedBox.shrink();
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Container(
-                                width: 120,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: Colors.blueAccent.withOpacity(0.3),
-                                        child: Text(
-                                          p.name[0],
-                                          style: GoogleFonts.poppins(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              p.name,
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            Text(
-                                              '${p.hand.length} cards${p.title != null ? ', ${p.title}' : ''}',
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.white70,
-                                                fontSize: 12,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (p.id == game.players[game.currentTurn].id)
-                                        const Icon(Icons.timer, color: Colors.yellow, size: 24),
-                                    ],
-                                  ),
+                        if (game.pile.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _getPatternMessage(game.pile.last, game.currentPattern),
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white70,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 14,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    Container(
-                      height: 157,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: game.pile.isNotEmpty
-                          ? Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: game.pile.last.length,
-                          itemBuilder: (context, i) {
-                            final card = game.pile.last[i];
-                            return Tooltip(
-                              message: card.isJoker
-                                  ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                  : card.isDetails
-                                  ? 'Details Card'
-                                  : '${card.rank} of ${card.suit}',
-                              child: CardWidget(card: card),
-                            );
-                          },
-                        ),
-                      )
-                          : Center(
-                        child: Text(
-                          'No cards played',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 16,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      game.isTestMode
-                          ? 'Test Mode: Your turn'
-                          : (isMyTurn ? 'Your turn!' : '${game.players[game.currentTurn].name}\'s turn'),
-                      style: GoogleFonts.poppins(
-                        color: isMyTurn ? Colors.greenAccent : Colors.redAccent,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return Stack(
-                                children: [
-                                  Column(
-                                    children: [
-                                      Container(
-                                        constraints: BoxConstraints(maxHeight: constraints.maxHeight),
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(top: 8.0, right: 20),
-                                          child: GridView.builder(
-                                            physics: const NeverScrollableScrollPhysics(),
-                                            shrinkWrap: true,
-                                            itemCount: player.hand.length,
-                                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                              crossAxisCount: 4,
-                                              mainAxisSpacing: 4,
-                                              crossAxisSpacing: 4,
-                                              childAspectRatio: 3.07 / 4.4,
-                                            ),
-                                            itemBuilder: (context, index) {
-                                              final card = player.hand[index];
-                                              return DragTarget<int>(
-                                                builder: (context, candidateData, rejectedData) {
-                                                  return Draggable<int>(
-                                                    data: index,
-                                                    feedback: Material(
-                                                      type: MaterialType.transparency,
-                                                      elevation: 8,
-                                                      child: Container(
-                                                        color: Colors.transparent,
-                                                        height: 175,
-                                                        width: 120,
-                                                        child: CardWidget(card: card, isSelected: false),
-                                                      ),
-                                                    ),
-                                                    childWhenDragging: Opacity(
-                                                      opacity: 0.3,
-                                                      child: CardWidget(
-                                                        card: card,
-                                                        isSelected: selectedCards.contains(card),
-                                                      ),
-                                                    ),
-                                                    child: GestureDetector(
-                                                      onLongPress: () {
-                                                        showDialog(
-                                                          context: context,
-                                                          barrierDismissible: true,
-                                                          barrierColor: Colors.transparent,
-                                                          builder: (context) => GestureDetector(
-                                                            onTap: () => Navigator.of(context).pop(),
-                                                            child: Dialog(
-                                                              backgroundColor: Colors.transparent,
-                                                              elevation: 0,
-                                                              insetPadding: EdgeInsets.zero,
-                                                              child: Stack(
-                                                                children: [
-                                                                  BackdropFilter(
-                                                                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                                                    child: Container(
-                                                                      color: Colors.black.withOpacity(0.3),
-                                                                    ),
-                                                                  ),
-                                                                  Center(
-                                                                    child: GestureDetector(
-                                                                      onTap: () {},
-                                                                      child: SizedBox(
-                                                                        height: 460,
-                                                                        width: 310,
-                                                                        child: CardWidget(
-                                                                          card: card,
-                                                                          isSelected: false,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        );
-                                                      },
-                                                      child: AnimatedContainer(
-                                                        duration: const Duration(milliseconds: 200),
-                                                        transform: Matrix4.identity()
-                                                          ..scale(selectedCards.contains(card) ? 1.1 : 1.0)
-                                                          ..translate(0.0, selectedCards.contains(card) ? -10.0 : 0.0),
-                                                        child: CardWidget(
-                                                          card: card,
-                                                          isSelected: selectedCards.contains(card),
-                                                          onTap: isMyTurn
-                                                              ? () {
-                                                            setState(() {
-                                                              if (selectedCards.contains(card)) {
-                                                                selectedCards.remove(card);
-                                                              } else {
-                                                                selectedCards.add(card);
-                                                              }
-                                                              _updateScrollThumbVisibility();
-                                                            });
-                                                          }
-                                                              : null,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                                onAccept: (oldIndex) {
-                                                  setState(() {
-                                                    final card = player.hand.removeAt(oldIndex);
-                                                    player.hand.insert(index, card);
-                                                    final currentHandIds = _lastSentHand.map(_cardId).toList()..sort();
-                                                    final newHandIds = player.hand.map(_cardId).toList()..sort();
-                                                    if (currentHandIds != newHandIds) {
-                                                      Provider.of<WebSocketService>(context, listen: false)
-                                                          .updateHandOrder(widget.gameId, widget.playerId, player.hand);
-                                                      _lastSentHand = List.from(player.hand);
-                                                    }
-                                                  });
-                                                },
-                                              );
-                                            },
-                                          ),
+                        const SizedBox(height: 10),
+                        if (!game.isTestMode)
+                          SizedBox(
+                            height: 100,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: game.players.length,
+                              itemBuilder: (context, i) {
+                                final p = game.players[i];
+                                if (p.id == widget.playerId) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: Container(
+                                    height: 50,
+                                    width: 180,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (_showScrollThumb)
-                                    Positioned(
-                                      right: 0,
-                                      top: 0,
-                                      bottom: 0,
-                                      child: GestureDetector(
-                                        onVerticalDragUpdate: (details) {
-                                          final newOffset = _scrollController.offset + details.delta.dy * 1.5;
-                                          _scrollController.jumpTo(
-                                            newOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-                                          );
-                                        },
-                                        child: Container(
-                                          width: 16,
-                                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey,
-                                            borderRadius: BorderRadius.circular(10),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
+                                      ],
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 20,
+                                            backgroundColor: Colors.blueAccent.withOpacity(0.3),
+                                            child: Text(
+                                              p.name[0],
+                                              style: GoogleFonts.poppins(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                            ],
+                                            ),
                                           ),
-                                          child: const Center(
-                                            child: Icon(Icons.drag_handle, color: Colors.white, size: 12),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  p.name,
+                                                  style: GoogleFonts.poppins(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  '${p.hand.length} cards${p.title != null ? ', ${p.title}' : ''}',
+                                                  style: GoogleFonts.poppins(
+                                                    color: Colors.white70,
+                                                    fontSize: 12,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
+                                          if (p.id == game.players[game.currentTurn].id)
+                                            const Icon(Icons.timer, color: Colors.yellow, size: 24),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              );
-                            },
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        AnimatedScaleButton(
-                          onPressed: isMyTurn && selectedCards.isNotEmpty ? () => _playCards(selectedCards) : null,
-                          child: Text(
-                            'Play',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
+                        const SizedBox(height: 20),
+                        Container(
+                          height: 157,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: game.pile.isNotEmpty
+                              ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: game.pile.last.length,
+                              itemBuilder: (context, i) {
+                                final card = game.pile.last[i];
+                                return Tooltip(
+                                  message: card.isJoker
+                                      ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                      : card.isDetails
+                                      ? 'Details Card'
+                                      : '${card.rank} of ${card.suit}',
+                                  child: CardWidget(card: card),
+                                );
+                              },
+                            ),
+                          )
+                              : Center(
+                            child: Text(
+                              'No cards played',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
-                        AnimatedScaleButton(
-                          onPressed: isMyTurn && !game.isTestMode ? _handlePass : null,
-                          child: Text(
-                            'Pass',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
+                        const SizedBox(height: 10),
+                        Text(
+                          game.isTestMode
+                              ? 'Test Mode: Your turn'
+                              : (isMyTurn
+                              ? 'Your turn!'
+                              : '${game.players[game.currentTurn].name}\'s turn'),
+                          style: GoogleFonts.poppins(
+                            color: isMyTurn ? Colors.greenAccent : Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
-                          tooltip: game.isTestMode ? 'Passing not allowed in test mode' : '',
                         ),
-                        AnimatedScaleButton(
-                          onPressed: isMyTurn && selectedCards.isNotEmpty ? () => _playCards(selectedCards, isTakeChance: true) : null,
-                          child: Text(
-                            'Take Chance',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: _scrollController,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return Stack(
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Container(
+                                            constraints: BoxConstraints(maxHeight: constraints.maxHeight),
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(top: 8.0, right: 20),
+                                              child: GridView.builder(
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                shrinkWrap: true,
+                                                itemCount: player.hand.length,
+                                                gridDelegate:
+                                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: 4,
+                                                  mainAxisSpacing: 4,
+                                                  crossAxisSpacing: 4,
+                                                  childAspectRatio: 3.07 / 4.4,
+                                                ),
+                                                itemBuilder: (context, index) {
+                                                  final card = player.hand[index];
+                                                  return DragTarget<int>(
+                                                    builder: (context, candidateData, rejectedData) {
+                                                      return Draggable<int>(
+                                                        data: index,
+                                                        feedback: Material(
+                                                          type: MaterialType.transparency,
+                                                          elevation: 8,
+                                                          child: Container(
+                                                            color: Colors.transparent,
+                                                            height: 175,
+                                                            width: 120,
+                                                            child: CardWidget(
+                                                                card: card, isSelected: false),
+                                                          ),
+                                                        ),
+                                                        childWhenDragging: Opacity(
+                                                          opacity: 0.3,
+                                                          child: CardWidget(
+                                                            card: card,
+                                                            isSelected: selectedCards.contains(card),
+                                                          ),
+                                                        ),
+                                                        child: GestureDetector(
+                                                          onLongPress: () {
+                                                            showDialog(
+                                                              context: context,
+                                                              barrierDismissible: true,
+                                                              barrierColor: Colors.transparent,
+                                                              builder: (context) => GestureDetector(
+                                                                onTap: () => Navigator.of(context).pop(),
+                                                                child: Dialog(
+                                                                  backgroundColor: Colors.transparent,
+                                                                  elevation: 0,
+                                                                  insetPadding: EdgeInsets.zero,
+                                                                  child: Stack(
+                                                                    children: [
+                                                                      BackdropFilter(
+                                                                        filter: ImageFilter.blur(
+                                                                            sigmaX: 5, sigmaY: 5),
+                                                                        child: Container(
+                                                                          color: Colors.black.withOpacity(0.3),
+                                                                        ),
+                                                                      ),
+                                                                      Center(
+                                                                        child: GestureDetector(
+                                                                          onTap: () {},
+                                                                          child: SizedBox(
+                                                                            height: 460,
+                                                                            width: 310,
+                                                                            child: CardWidget(
+                                                                              card: card,
+                                                                              isSelected: false,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: AnimatedContainer(
+                                                            duration: const Duration(milliseconds: 200),
+                                                            transform: Matrix4.identity()
+                                                              ..scale(
+                                                                  selectedCards.contains(card) ? 1.1 : 1.0)
+                                                              ..translate(
+                                                                  0.0,
+                                                                  selectedCards.contains(card)
+                                                                      ? -10.0
+                                                                      : 0.0),
+                                                            child: CardWidget(
+                                                              card: card,
+                                                              isSelected: selectedCards.contains(card),
+                                                              onTap: isMyTurn
+                                                                  ? () {
+                                                                setState(() {
+                                                                  if (selectedCards.contains(card)) {
+                                                                    selectedCards.remove(card);
+                                                                  } else {
+                                                                    selectedCards.add(card);
+                                                                  }
+                                                                  _updateScrollThumbVisibility();
+                                                                });
+                                                              }
+                                                                  : null,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    onAccept: (oldIndex) {
+                                                      setState(() {
+                                                        final card = player.hand.removeAt(oldIndex);
+                                                        player.hand.insert(index, card);
+                                                        final currentHandIds =
+                                                        _lastSentHand.map(_cardId).toList()
+                                                          ..sort();
+                                                        final newHandIds =
+                                                        player.hand.map(_cardId).toList()
+                                                          ..sort();
+                                                        if (currentHandIds != newHandIds) {
+                                                          Provider.of<WebSocketService>(context,
+                                                              listen: false)
+                                                              .updateHandOrder(
+                                                              widget.gameId,
+                                                              widget.playerId,
+                                                              player.hand);
+                                                          _lastSentHand = List.from(player.hand);
+                                                        }
+                                                      });
+                                                    },
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (_showScrollThumb)
+                                        Positioned(
+                                          right: 4,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onVerticalDragUpdate: (details) {
+                                                final newOffset = _scrollController.offset +
+                                                    details.delta.dy * 1.5;
+                                                _scrollController.jumpTo(
+                                                  newOffset.clamp(
+                                                      0.0, _scrollController.position.maxScrollExtent),
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 12,
+                                                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withOpacity(0.7),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black.withOpacity(0.2),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: const Center(
+                                                  child: Icon(Icons.drag_handle,
+                                                      color: Colors.black54, size: 10),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            AnimatedScaleButton(
+                              onPressed: isMyTurn && selectedCards.isNotEmpty
+                                  ? () => _playCards(selectedCards)
+                                  : null,
+                              child: Text(
+                                'Play',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            AnimatedScaleButton(
+                              onPressed: isMyTurn && !game.isTestMode ? _handlePass : null,
+                              child: Text(
+                                'Pass',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              tooltip: game.isTestMode ? 'Passing not allowed in test mode' : '',
+                            ),
+                            AnimatedScaleButton(
+                              onPressed: isMyTurn && selectedCards.isNotEmpty
+                                  ? () => _playCards(selectedCards, isTakeChance: true)
+                                  : null,
+                              child: Text(
+                                'Take Chance',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  if (_showNewRoundNotification && _newRoundMessage != null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      top: 16,
+                      child: SlideTransition(
+                        position: _notificationAnimation!,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            _newRoundMessage!,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

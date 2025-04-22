@@ -61,7 +61,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       const SizedBox(height: 16),
                       CustomTextField(
                         controller: _gameIdController,
-                        hint: 'Game ID (leave blank to create new)',
+                        hint: 'Game ID',
 
                       ),
                       const SizedBox(height: 16),

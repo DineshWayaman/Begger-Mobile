@@ -9,7 +9,7 @@ class WebSocketService with ChangeNotifier {
   String? error;
 
   WebSocketService() {
-    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
+    socket = IO.io('http://13.203.195.33:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
