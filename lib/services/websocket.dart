@@ -7,6 +7,7 @@ class WebSocketService with ChangeNotifier {
   late IO.Socket socket;
   Game? game;
   String? error;
+  void Function()? onDismissDialog;
 
   WebSocketService() {
     socket = IO.io('http://13.203.195.33:3000', <String, dynamic>{
@@ -37,6 +38,14 @@ class WebSocketService with ChangeNotifier {
       notifyListeners();
     });
 
+    socket.on('dismissDialog', (_) {
+      print('Received dismissDialog event');
+      if (onDismissDialog != null) {
+        onDismissDialog!();
+      }
+      notifyListeners();
+    });
+
     socket.on('error', (data) {
       print('Received error: $data');
       error = data.toString();
@@ -62,9 +71,18 @@ class WebSocketService with ChangeNotifier {
       'isTestMode': isTestMode,
     });
   }
+
   void startGame(String gameId, String playerId) {
     print('Starting game: $gameId, player: $playerId');
     socket.emit('startGame', {
+      'gameId': gameId,
+      'playerId': playerId,
+    });
+  }
+
+  void restartGame(String gameId, String playerId) {
+    print('Restarting game: $gameId, player: $playerId');
+    socket.emit('restartGame', {
       'gameId': gameId,
       'playerId': playerId,
     });

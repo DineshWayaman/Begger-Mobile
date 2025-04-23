@@ -32,6 +32,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   AnimationController? _notificationController;
   Animation<Offset>? _notificationAnimation;
   String? _newRoundMessage;
+  BuildContext? _dialogContext;
+  bool _isRestarted = false; // Tracks if restart was initiated
 
   @override
   void initState() {
@@ -51,8 +53,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) _updateScrollThumbVisibility();
     });
     _scrollController.addListener(_updateScrollThumbVisibility);
-    Provider.of<WebSocketService>(context, listen: false)
-        .addListener(_onGameStateChanged);
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.addListener(_onGameStateChanged);
+    ws.onDismissDialog = () {
+      if (_isDialogShowing && _dialogContext != null && mounted) {
+        Navigator.of(_dialogContext!).pop();
+        setState(() {
+          _isDialogShowing = false;
+          _dialogContext = null;
+          _isRestarted = true; // Mark as restarted
+        });
+      }
+    };
   }
 
   @override
@@ -65,8 +77,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void dispose() {
     _scrollController.dispose();
     _notificationController?.dispose();
-    Provider.of<WebSocketService>(context, listen: false)
-        .removeListener(_onGameStateChanged);
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.removeListener(_onGameStateChanged);
+    ws.onDismissDialog = null;
     super.dispose();
   }
 
@@ -78,7 +91,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // Check for game start to show new round notification
     if (!_hasShownNewRoundMessage && game.status != 'waiting' && game.pile.isEmpty && game.passCount == 0) {
       final starter = game.players[game.currentTurn];
       final message = 'New Round Started! ${starter.name} begins!';
@@ -96,7 +108,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               _notificationController?.reverse().then((_) {
                 _showNewRoundNotification = false;
                 _newRoundMessage = null;
-                _hasShownNewRoundMessage = false; // Reset to allow new round message
+                _hasShownNewRoundMessage = false;
+                if (_isRestarted) {
+                  _isRestarted = false; // Reset after new round notification
+                }
               });
             });
           }
@@ -104,7 +119,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       }
     }
 
-    // Handle joker messages
     if (game.pile.isNotEmpty) {
       final lastPlay = game.pile.last;
       final player = game.lastPlayedPlayerId != null
@@ -145,51 +159,139 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void _showGameMessages() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     final game = ws.game;
-    if (game == null || _isDialogShowing) return;
+    if (game == null || _isDialogShowing || _isRestarted) return;
 
-    // Title message
     final titledPlayers = game.players.where((p) => p.title != null).toList();
     if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
-      final message =
-      titledPlayers.map((p) => '${p.name}: ${p.title}').join(', ');
+      final message = titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
       if (!_shownMessages.contains(message)) {
         _shownMessages.add(message);
-        _showTitleDialog(message, const Duration(seconds: 5));
+        _showGameSummaryDialog(message);
       }
     }
   }
 
-  void _showTitleDialog(String message, Duration duration) {
+  void _showGameSummaryDialog(String message) {
     if (_isDialogShowing || !mounted) return;
-    _isDialogShowing = true;
+    setState(() {
+      _isDialogShowing = true;
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          backgroundColor: Colors.green,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          content: Text(
-            message,
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 16,
+        builder: (dialogContext) {
+          _dialogContext = dialogContext;
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ),
+            contentPadding: EdgeInsets.zero,
+            content: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 15,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Game Summary',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: 200,
+                      ),
+                      child: SingleChildScrollView(
+                        child: Text(
+                          message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.black87,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        AnimatedScaleDailogButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            setState(() {
+                              _isDialogShowing = false;
+                              _dialogContext = null;
+                            });
+                            _hasShownNewRoundMessage = false;
+                            _shownMessages.clear();
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                            );
+                          },
+                          child: Text(
+                            'Lobby',
+                            style: GoogleFonts.poppins(
+                              color: Colors.teal,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        AnimatedScaleDailogButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                            setState(() {
+                              _isDialogShowing = false;
+                              _dialogContext = null;
+                              _isRestarted = true; // Mark as restarted
+                            });
+                            _handleRestartGame();
+                          },
+                          child: Text(
+                            'Replay',
+                            style: GoogleFonts.poppins(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ).then((_) {
-        _isDialogShowing = false;
-      });
-
-      Future.delayed(duration, () {
-        if (mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
+        setState(() {
+          _isDialogShowing = false;
+          _dialogContext = null;
+        });
       });
     });
   }
@@ -269,27 +371,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             ),
                             value: selectedRank,
                             items: [
-                              '3',
-                              '4',
-                              '5',
-                              '6',
-                              '7',
-                              '8',
-                              '9',
-                              '10',
-                              'J',
-                              'Q',
-                              'K',
-                              'A',
-                              '2'
-                            ]
-                                .map((rank) => DropdownMenuItem(
+                              '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'
+                            ].map((rank) => DropdownMenuItem(
                               value: rank,
                               child: Text(rank, style: GoogleFonts.poppins()),
-                            ))
-                                .toList(),
-                            onChanged: (value) =>
-                                setDialogState(() => selectedRank = value),
+                            )).toList(),
+                            onChanged: (value) => setDialogState(() => selectedRank = value),
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
@@ -310,8 +397,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               child: Text(suit, style: GoogleFonts.poppins()),
                             ))
                                 .toList(),
-                            onChanged: (value) =>
-                                setDialogState(() => selectedSuit = value),
+                            onChanged: (value) => setDialogState(() => selectedSuit = value),
                           ),
                           const SizedBox(height: 20),
                           Row(
@@ -322,8 +408,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                 child: Text(
                                   'Cancel',
                                   style: GoogleFonts.poppins(
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500),
+                                      color: Colors.grey[600], fontWeight: FontWeight.w500),
                                 ),
                               ),
                               ElevatedButton(
@@ -350,8 +435,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                 child: Text(
                                   'OK',
                                   style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500),
+                                      color: Colors.white, fontWeight: FontWeight.w500),
                                 ),
                               ),
                             ],
@@ -371,8 +455,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Joker assignment cancelled',
-                  style: GoogleFonts.poppins()),
+              content: Text('Joker assignment cancelled', style: GoogleFonts.poppins()),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -389,10 +472,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (cards.isEmpty) return '';
     final hasJoker = cards.any((c) => c.isJoker);
     final firstCard = cards[0];
-    final effectiveRank =
-    firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
-    final effectiveSuit =
-    firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
+    final effectiveRank = firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
+    final effectiveSuit = firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
 
     if (pattern == 'single') {
       if (firstCard.isDetails) return 'Details Card';
@@ -417,19 +498,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           final rankA = a.isJoker ? a.assignedRank : a.rank;
           final rankB = b.isJoker ? b.assignedRank : b.rank;
           const values = {
-            '3': 3,
-            '4': 4,
-            '5': 5,
-            '6': 6,
-            '7': 7,
-            '8': 8,
-            '9': 9,
-            '10': 10,
-            'J': 11,
-            'Q': 12,
-            'K': 13,
-            'A': 14,
-            '2': 15,
+            '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+            '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '2': 15,
           };
           final valueA = rankA != null ? values[rankA] ?? 0 : 0;
           final valueB = rankB != null ? values[rankB] ?? 0 : 0;
@@ -437,8 +507,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         });
       final startCard = sortedCards.first;
       final startRank = startCard.isJoker ? startCard.assignedRank : startCard.rank;
-      final startSuit =
-      startCard.isJoker ? startCard.assignedSuit : startCard.suit;
+      final startSuit = startCard.isJoker ? startCard.assignedSuit : startCard.suit;
       return hasJoker
           ? 'Joker Consecutive: Starting at $startRank of $startSuit'
           : 'Consecutive: Starting at $startRank of $startSuit';
@@ -451,8 +520,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Details card can only be played alone',
-                style: GoogleFonts.poppins()),
+            content: Text('Details card can only be played alone', style: GoogleFonts.poppins()),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -510,8 +578,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
 
     final playedCardIds = assignedCards.map(_cardId).toList();
-    final remainingHand =
-    player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
+    final remainingHand = player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
 
     if (game.isTestMode) {
       setState(() {
@@ -523,21 +590,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Played ${assignedCards.length} cards in test mode',
-                style: GoogleFonts.poppins()),
+            content: Text('Played ${assignedCards.length} cards in test mode', style: GoogleFonts.poppins()),
             backgroundColor: Colors.green,
           ),
         );
       }
-      ws.playPattern(
-          widget.gameId, widget.playerId, assignedCards, remainingHand);
+      ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
     } else {
       if (isTakeChance) {
-        ws.takeChance(
-            widget.gameId, widget.playerId, assignedCards, remainingHand);
+        ws.takeChance(widget.gameId, widget.playerId, assignedCards, remainingHand);
       } else {
-        ws.playPattern(
-            widget.gameId, widget.playerId, assignedCards, remainingHand);
+        ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
       }
       if (ws.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -573,8 +636,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Passing not allowed in test mode',
-                style: GoogleFonts.poppins()),
+            content: Text('Passing not allowed in test mode', style: GoogleFonts.poppins()),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -609,12 +671,29 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to start game: ${ws.error}',
-              style: GoogleFonts.poppins()),
+          content: Text('Failed to start game: ${ws.error}', style: GoogleFonts.poppins()),
           backgroundColor: Colors.redAccent,
         ),
       );
       ws.error = null;
+    }
+  }
+
+  void _handleRestartGame() {
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.restartGame(widget.gameId, widget.playerId);
+    if (ws.error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to restart game: ${ws.error}', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      ws.error = null;
+    } else {
+      // Clear messages and reset state only after successful restart
+      _hasShownNewRoundMessage = false;
+      _shownMessages.clear();
     }
   }
 
@@ -629,13 +708,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Error: $errorMessage',
-                      style: GoogleFonts.poppins()),
+                  content: Text('Error: $errorMessage', style: GoogleFonts.poppins()),
                   backgroundColor: Colors.redAccent,
                 ),
               );
-              if (errorMessage == 'Game is full' ||
-                  errorMessage == 'Game has already started') {
+              if (errorMessage == 'Game is full' || errorMessage == 'Game has already started') {
                 _hasShownNewRoundMessage = false;
                 _shownMessages.clear();
                 Navigator.pushReplacement(
@@ -763,10 +840,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                       child: Text(
                         'Return to Lobby',
@@ -783,8 +858,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           );
         }
 
-        final isMyTurn =
-            game.isTestMode || game.players[game.currentTurn].id == widget.playerId;
+        final isMyTurn = game.isTestMode || game.players[game.currentTurn].id == widget.playerId;
+        final canPass = isMyTurn &&
+            !game.isTestMode &&
+            !(game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty);
 
         return Scaffold(
           body: Container(
@@ -1171,7 +1248,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                             ),
                             AnimatedScaleButton(
-                              onPressed: isMyTurn && !game.isTestMode ? _handlePass : null,
+                              onPressed: canPass ? _handlePass : null,
                               child: Text(
                                 'Pass',
                                 style: GoogleFonts.poppins(
@@ -1180,7 +1257,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   fontSize: 16,
                                 ),
                               ),
-                              tooltip: game.isTestMode ? 'Passing not allowed in test mode' : '',
+                              tooltip: game.isTestMode
+                                  ? 'Passing not allowed in test mode'
+                                  : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
+                                  ? 'Cannot pass as new round starter'
+                                  : '',
                             ),
                             AnimatedScaleButton(
                               onPressed: isMyTurn && selectedCards.isNotEmpty
@@ -1277,5 +1358,37 @@ class AnimatedScaleButton extends StatelessWidget {
       child: button,
     )
         : button;
+  }
+}
+
+class AnimatedScaleDailogButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  const AnimatedScaleDailogButton({
+    super.key,
+    required this.onPressed,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      transform: Matrix4.identity()..scale(onPressed != null ? 1.0 : 0.95),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.2),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+        ),
+        child: child,
+      ),
+    );
   }
 }
