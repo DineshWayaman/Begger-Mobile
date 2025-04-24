@@ -24,11 +24,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.blue.shade300, Colors.purple.shade400],
-          ),
+          image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+          // gradient: LinearGradient(
+          //   begin: Alignment.topLeft,
+          //   end: Alignment.bottomRight,
+          //   colors: [Colors.blue.shade300, Colors.purple.shade400],
+          // ),
         ),
         child: SafeArea(
           child: Center(

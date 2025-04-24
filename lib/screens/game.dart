@@ -729,11 +729,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           return Scaffold(
             body: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade300, Colors.purple.shade300],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+                // gradient: LinearGradient(
+                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
+                //   begin: Alignment.topLeft,
+                //   end: Alignment.bottomRight,
+                // ),
               ),
               child: const Center(child: CircularProgressIndicator(color: Colors.white)),
             ),
@@ -744,11 +745,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           return Scaffold(
             body: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade300, Colors.purple.shade300],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+                // gradient: LinearGradient(
+                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
+                //   begin: Alignment.topLeft,
+                //   end: Alignment.bottomRight,
+                // ),
               ),
               child: Center(
                 child: Column(
@@ -809,11 +811,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           return Scaffold(
             body: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade300, Colors.purple.shade300],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+                // gradient: LinearGradient(
+                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
+                //   begin: Alignment.topLeft,
+                //   end: Alignment.bottomRight,
+                // ),
               ),
               child: Center(
                 child: Column(
@@ -866,11 +869,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         return Scaffold(
           body: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade300, Colors.purple.shade300],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
             ),
             child: SafeArea(
               child: Stack(
