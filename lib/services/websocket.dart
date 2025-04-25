@@ -8,9 +8,11 @@ class WebSocketService with ChangeNotifier {
   Game? game;
   String? error;
   void Function()? onDismissDialog;
+  void Function(Map<String, dynamic>)? onSelectKingCard;
+  void Function(String)? onCardExchangeNotification;
 
   WebSocketService() {
-    socket = IO.io('http://13.203.195.33:3000', <String, dynamic>{
+    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -42,6 +44,22 @@ class WebSocketService with ChangeNotifier {
       print('Received dismissDialog event');
       if (onDismissDialog != null) {
         onDismissDialog!();
+      }
+      notifyListeners();
+    });
+
+    socket.on('selectKingCard', (data) {
+      print('Received selectKingCard: $data');
+      if (onSelectKingCard != null) {
+        onSelectKingCard!(data);
+      }
+      notifyListeners();
+    });
+
+    socket.on('cardExchangeNotification', (data) {
+      print('Received cardExchangeNotification: $data');
+      if (onCardExchangeNotification != null) {
+        onCardExchangeNotification!(data['message']);
       }
       notifyListeners();
     });
@@ -106,22 +124,21 @@ class WebSocketService with ChangeNotifier {
     });
   }
 
-  void takeChance(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {
-    print('WebSocket: Sending takeChance with cards: ${cards.map((c) => c.isJoker ? "${c.assignedRank} of ${c.assignedSuit}" : "${c.rank} of ${c.suit}").toList()}');
-    socket.emit('takeChance', {
-      'gameId': gameId,
-      'playerId': playerId,
-      'cards': cards.map((c) => c.toJson()).toList(),
-      'hand': hand.map((c) => c.toJson()).toList(),
-    });
-  }
-
   void updateHandOrder(String gameId, String playerId, List<Cards> hand) {
     print('WebSocket: Sending updateHandOrder with hand: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
     socket.emit('updateHandOrder', {
       'gameId': gameId,
       'playerId': playerId,
       'hand': hand.map((c) => c.toJson()).toList(),
+    });
+  }
+
+  void selectKingCard(String gameId, String playerId, Cards card) {
+    print('WebSocket: Sending kingCardSelected for player $playerId in game $gameId');
+    socket.emit('kingCardSelected', {
+      'gameId': gameId,
+      'playerId': playerId,
+      'card': card.toJson(),
     });
   }
 

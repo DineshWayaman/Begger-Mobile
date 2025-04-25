@@ -33,7 +33,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Animation<Offset>? _notificationAnimation;
   String? _newRoundMessage;
   BuildContext? _dialogContext;
-  bool _isRestarted = false; // Tracks if restart was initiated
+  bool _isRestarted = false;
 
   @override
   void initState() {
@@ -61,7 +61,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         setState(() {
           _isDialogShowing = false;
           _dialogContext = null;
-          _isRestarted = true; // Mark as restarted
+          _isRestarted = true;
         });
       }
     };
@@ -110,7 +110,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 _newRoundMessage = null;
                 _hasShownNewRoundMessage = false;
                 if (_isRestarted) {
-                  _isRestarted = false; // Reset after new round notification
+                  _isRestarted = false;
                 }
               });
             });
@@ -266,7 +266,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             setState(() {
                               _isDialogShowing = false;
                               _dialogContext = null;
-                              _isRestarted = true; // Mark as restarted
+                              _isRestarted = true;
                             });
                             _handleRestartGame();
                           },
@@ -530,7 +530,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return true;
   }
 
-  void _playCards(List<Cards> cards, {bool isTakeChance = false}) async {
+  void _playCards(List<Cards> cards) async {
     if (!_validateDetailsCard(cards)) return;
 
     final ws = Provider.of<WebSocketService>(context, listen: false);
@@ -597,11 +597,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       }
       ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
     } else {
-      if (isTakeChance) {
-        ws.takeChance(widget.gameId, widget.playerId, assignedCards, remainingHand);
-      } else {
-        ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
-      }
+      ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
       if (ws.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -691,7 +687,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
       ws.error = null;
     } else {
-      // Clear messages and reset state only after successful restart
       _hasShownNewRoundMessage = false;
       _shownMessages.clear();
     }
@@ -730,11 +725,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             body: Container(
               decoration: BoxDecoration(
                 image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-                // gradient: LinearGradient(
-                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
-                //   begin: Alignment.topLeft,
-                //   end: Alignment.bottomRight,
-                // ),
               ),
               child: const Center(child: CircularProgressIndicator(color: Colors.white)),
             ),
@@ -746,11 +736,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             body: Container(
               decoration: BoxDecoration(
                 image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-                // gradient: LinearGradient(
-                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
-                //   begin: Alignment.topLeft,
-                //   end: Alignment.bottomRight,
-                // ),
               ),
               child: Center(
                 child: Column(
@@ -812,11 +797,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             body: Container(
               decoration: BoxDecoration(
                 image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-                // gradient: LinearGradient(
-                //   colors: [Colors.blue.shade300, Colors.purple.shade300],
-                //   begin: Alignment.topLeft,
-                //   end: Alignment.bottomRight,
-                // ),
               ),
               child: Center(
                 child: Column(
@@ -1231,7 +1211,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         ),
                         const SizedBox(height: 10),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             AnimatedScaleButton(
                               onPressed: isMyTurn && selectedCards.isNotEmpty
@@ -1261,19 +1241,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
                                   ? 'Cannot pass as new round starter'
                                   : '',
-                            ),
-                            AnimatedScaleButton(
-                              onPressed: isMyTurn && selectedCards.isNotEmpty
-                                  ? () => _playCards(selectedCards, isTakeChance: true)
-                                  : null,
-                              child: Text(
-                                'Take Chance',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
-                                ),
-                              ),
                             ),
                           ],
                         ),
