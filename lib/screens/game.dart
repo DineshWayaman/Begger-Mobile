@@ -8,6 +8,7 @@ import '../models/card.dart';
 import '../services/websocket.dart';
 import '../widgets/card_widget.dart';
 import 'lobby.dart';
+import 'game_summary_screen.dart';
 
 class GameScreen extends StatefulWidget {
   final String gameId;
@@ -32,8 +33,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   AnimationController? _notificationController;
   Animation<Offset>? _notificationAnimation;
   String? _newRoundMessage;
-  BuildContext? _dialogContext;
   bool _isRestarted = false;
+  bool _isReplayInitiator = false;
 
   @override
   void initState() {
@@ -56,13 +57,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.addListener(_onGameStateChanged);
     ws.onDismissDialog = () {
-      if (_isDialogShowing && _dialogContext != null && mounted) {
-        Navigator.of(_dialogContext!).pop();
+      if (_isDialogShowing && mounted && !_isReplayInitiator) {
         setState(() {
           _isDialogShowing = false;
-          _dialogContext = null;
           _isRestarted = true;
         });
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
       }
     };
   }
@@ -90,6 +92,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _showGameMessages();
       return;
     }
+
+    // Debug: Log the starting player
+    debugPrint('Game state updated. Current turn: ${game.currentTurn}, Player: ${game.players[game.currentTurn].name}');
 
     if (!_hasShownNewRoundMessage && game.status != 'waiting' && game.pile.isEmpty && game.passCount == 0) {
       final starter = game.players[game.currentTurn];
@@ -161,17 +166,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final game = ws.game;
     if (game == null || _isDialogShowing || _isRestarted) return;
 
+    // Check for gameOverSummary first
+    if (ws.gameOverSummary != null && !_shownMessages.contains(ws.gameOverSummary)) {
+      _shownMessages.add(ws.gameOverSummary!);
+      _showGameSummaryScreen(ws.gameOverSummary!);
+      return;
+    }
+
+    // Fallback to checking titled players
     final titledPlayers = game.players.where((p) => p.title != null).toList();
     if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
       final message = titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
       if (!_shownMessages.contains(message)) {
         _shownMessages.add(message);
-        _showGameSummaryDialog(message);
+        _showGameSummaryScreen(message);
       }
     }
   }
 
-  void _showGameSummaryDialog(String message) {
+  void _showGameSummaryScreen(String message) {
     if (_isDialogShowing || !mounted) return;
     setState(() {
       _isDialogShowing = true;
@@ -179,118 +192,41 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          _dialogContext = dialogContext;
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 15,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Game Summary',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: 200,
-                      ),
-                      child: SingleChildScrollView(
-                        child: Text(
-                          message,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: Colors.black87,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        AnimatedScaleDailogButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            setState(() {
-                              _isDialogShowing = false;
-                              _dialogContext = null;
-                            });
-                            _hasShownNewRoundMessage = false;
-                            _shownMessages.clear();
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                            );
-                          },
-                          child: Text(
-                            'Lobby',
-                            style: GoogleFonts.poppins(
-                              color: Colors.teal,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        AnimatedScaleDailogButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop();
-                            setState(() {
-                              _isDialogShowing = false;
-                              _dialogContext = null;
-                              _isRestarted = true;
-                            });
-                            _handleRestartGame();
-                          },
-                          child: Text(
-                            'Replay',
-                            style: GoogleFonts.poppins(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GameSummaryScreen(
+            summaryMessage: message,
+            gameId: widget.gameId,
+            playerId: widget.playerId,
+            onLobbyPressed: () {
+              _hasShownNewRoundMessage = false;
+              _shownMessages.clear();
+              setState(() {
+                _isDialogShowing = false;
+                _isRestarted = true;
+                _isReplayInitiator = false;
+              });
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                    (route) => false,
+              );
+            },
+            onReplayPressed: () {
+              setState(() {
+                _isDialogShowing = false;
+                _isRestarted = true;
+                _isReplayInitiator = true;
+              });
+              _handleRestartGame();
+            },
+          ),
+        ),
       ).then((_) {
         setState(() {
           _isDialogShowing = false;
-          _dialogContext = null;
+          _isReplayInitiator = false;
         });
       });
     });
@@ -498,8 +434,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           final rankA = a.isJoker ? a.assignedRank : a.rank;
           final rankB = b.isJoker ? b.assignedRank : b.rank;
           const values = {
-            '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-            '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '2': 15,
+            '3': 3,
+            '4': 4,
+            '5': 5,
+            '6': 6,
+            '7': 7,
+            '8': 8,
+            '9': 9,
+            '10': 10,
+            'J': 11,
+            'Q': 12,
+            'K': 13,
+            'A': 14,
+            '2': 15,
           };
           final valueA = rankA != null ? values[rankA] ?? 0 : 0;
           final valueB = rankB != null ? values[rankB] ?? 0 : 0;
@@ -677,6 +624,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   void _handleRestartGame() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
+    // Pop the GameSummaryScreen locally for the initiator
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
     ws.restartGame(widget.gameId, widget.playerId);
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -687,8 +638,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
       ws.error = null;
     } else {
-      _hasShownNewRoundMessage = false;
-      _shownMessages.clear();
+      setState(() {
+        _hasShownNewRoundMessage = false;
+        _shownMessages.clear();
+        selectedCards = [];
+        _lastSentHand = [];
+        _lastJokerMessage = null;
+      });
     }
   }
 
@@ -1150,9 +1106,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                                           Provider.of<WebSocketService>(context,
                                                               listen: false)
                                                               .updateHandOrder(
-                                                              widget.gameId,
-                                                              widget.playerId,
-                                                              player.hand);
+                                                              widget.gameId, widget.playerId, player.hand);
                                                           _lastSentHand = List.from(player.hand);
                                                         }
                                                       });
@@ -1271,8 +1225,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             _newRoundMessage!,
                             style: GoogleFonts.poppins(
                               color: Colors.white,
-                              fontSize: 16,
                               fontWeight: FontWeight.w500,
+                              fontSize: 16,
                             ),
                             textAlign: TextAlign.center,
                           ),

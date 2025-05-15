@@ -7,6 +7,7 @@ class WebSocketService with ChangeNotifier {
   late IO.Socket socket;
   Game? game;
   String? error;
+  String? gameOverSummary;
   void Function()? onDismissDialog;
   void Function(Map<String, dynamic>)? onSelectKingCard;
   void Function(String)? onCardExchangeNotification;
@@ -18,38 +19,44 @@ class WebSocketService with ChangeNotifier {
     });
 
     socket.onConnect((_) {
-      print('Socket connected');
+      debugPrint('Socket connected');
       notifyListeners();
     });
 
     socket.onConnectError((data) {
-      print('Connect error: $data');
+      debugPrint('Connect error: $data');
       error = 'Connection failed: $data';
       notifyListeners();
     });
 
     socket.on('gameUpdate', (data) {
-      print('Received gameUpdate: $data');
+      debugPrint('Received gameUpdate: $data');
       try {
         game = Game.fromJson(data);
         error = null;
       } catch (e) {
-        print('Error parsing game: $e');
+        debugPrint('Error parsing game: $e');
         error = 'Failed to load game: $e';
       }
       notifyListeners();
     });
 
     socket.on('dismissDialog', (_) {
-      print('Received dismissDialog event');
+      debugPrint('Received dismissDialog event');
       if (onDismissDialog != null) {
         onDismissDialog!();
       }
       notifyListeners();
     });
 
+    socket.on('gameOver', (data) {
+      debugPrint('Received gameOver: $data');
+      gameOverSummary = data['summaryMessage'];
+      notifyListeners();
+    });
+
     socket.on('selectKingCard', (data) {
-      print('Received selectKingCard: $data');
+      debugPrint('Received selectKingCard: $data');
       if (onSelectKingCard != null) {
         onSelectKingCard!(data);
       }
@@ -57,7 +64,7 @@ class WebSocketService with ChangeNotifier {
     });
 
     socket.on('cardExchangeNotification', (data) {
-      print('Received cardExchangeNotification: $data');
+      debugPrint('Received cardExchangeNotification: $data');
       if (onCardExchangeNotification != null) {
         onCardExchangeNotification!(data['message']);
       }
@@ -65,7 +72,7 @@ class WebSocketService with ChangeNotifier {
     });
 
     socket.on('error', (data) {
-      print('Received error: $data');
+      debugPrint('Received error: $data');
       error = data.toString();
       notifyListeners();
     });
@@ -76,12 +83,12 @@ class WebSocketService with ChangeNotifier {
   }
 
   void requestGameState(String gameId) {
-    print('Requesting game state for $gameId');
+    debugPrint('Requesting game state for $gameId');
     socket.emit('requestGameState', {'gameId': gameId});
   }
 
   void joinGame(String gameId, String playerId, String playerName, {bool isTestMode = false}) {
-    print('Joining game: $gameId, player: $playerId, test: $isTestMode');
+    debugPrint('Joining game: $gameId, player: $playerId, test: $isTestMode');
     socket.emit('join', {
       'gameId': gameId,
       'playerId': playerId,
@@ -91,7 +98,7 @@ class WebSocketService with ChangeNotifier {
   }
 
   void startGame(String gameId, String playerId) {
-    print('Starting game: $gameId, player: $playerId');
+    debugPrint('Starting game: $gameId, player: $playerId');
     socket.emit('startGame', {
       'gameId': gameId,
       'playerId': playerId,
@@ -99,15 +106,17 @@ class WebSocketService with ChangeNotifier {
   }
 
   void restartGame(String gameId, String playerId) {
-    print('Restarting game: $gameId, player: $playerId');
+    debugPrint('Restarting game: $gameId, player: $playerId');
     socket.emit('restartGame', {
       'gameId': gameId,
       'playerId': playerId,
     });
+    gameOverSummary = null; // Clear game over summary on restart
   }
 
   void playPattern(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {
-    print('WebSocket: Sending playPattern with cards: ${cards.map((c) => c.isJoker ? "${c.assignedRank} of ${c.assignedSuit}" : "${c.rank} of ${c.suit}").toList()}');
+    debugPrint(
+        'WebSocket: Sending playPattern with cards: ${cards.map((c) => c.isJoker ? "${c.assignedRank} of ${c.assignedSuit}" : "${c.rank} of ${c.suit}").toList()}');
     socket.emit('playPattern', {
       'gameId': gameId,
       'playerId': playerId,
@@ -117,7 +126,7 @@ class WebSocketService with ChangeNotifier {
   }
 
   void pass(String gameId, String playerId) {
-    print('WebSocket: Sending pass for player $playerId in game $gameId');
+    debugPrint('WebSocket: Sending pass for player $playerId in game $gameId');
     socket.emit('pass', {
       'gameId': gameId,
       'playerId': playerId,
@@ -125,7 +134,8 @@ class WebSocketService with ChangeNotifier {
   }
 
   void updateHandOrder(String gameId, String playerId, List<Cards> hand) {
-    print('WebSocket: Sending updateHandOrder with hand: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
+    debugPrint(
+        'WebSocket: Sending updateHandOrder with hand: ${hand.map((c) => c.isJoker ? "${c.suit} (${c.assignedRank} of ${c.assignedSuit})" : "${c.rank} of ${c.suit}").toList()}');
     socket.emit('updateHandOrder', {
       'gameId': gameId,
       'playerId': playerId,
@@ -134,7 +144,7 @@ class WebSocketService with ChangeNotifier {
   }
 
   void selectKingCard(String gameId, String playerId, Cards card) {
-    print('WebSocket: Sending kingCardSelected for player $playerId in game $gameId');
+    debugPrint('WebSocket: Sending kingCardSelected for player $playerId in game $gameId');
     socket.emit('kingCardSelected', {
       'gameId': gameId,
       'playerId': playerId,
