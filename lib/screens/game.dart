@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/models/player.dart';
+import 'package:begger_card_game/screens/home_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/game.dart';
 import '../models/card.dart';
 import '../services/websocket.dart';
@@ -45,6 +48,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    // Clear shown messages to prevent stale data from previous games
+    _shownMessages.clear();
     _notificationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -88,12 +93,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Microphone permission denied. Voice chat disabled.', style: GoogleFonts.poppins()),
+            content: Text('Microphone permission denied. Voice chat disabled.', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
       }
     }
+  }
+
+  void _shareGameInvite() {
+    Share.share(
+      'Join my Beggar game! Game ID: ${widget.gameId}\nLet\'s play together!',
+      subject: 'Invite to Beggar Game',
+    );
   }
 
   @override
@@ -173,7 +185,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(jokerMessage, style: GoogleFonts.poppins()),
+                    content: Text(jokerMessage, style: TextStyle(fontFamily: "Poppins")),
                     backgroundColor: Colors.blueAccent,
                     duration: const Duration(seconds: 3),
                   ),
@@ -193,14 +205,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final game = ws.game;
     if (game == null || _isDialogShowing || _isRestarted) return;
 
-    if (ws.gameOverSummary != null && !_shownMessages.contains(ws.gameOverSummary)) {
+    // Only show game over summary if the game is actually finished
+    if (ws.gameOverSummary != null && game.status == 'finished' && !_shownMessages.contains(ws.gameOverSummary)) {
       _shownMessages.add(ws.gameOverSummary!);
       _showGameSummaryScreen(ws.gameOverSummary!);
       return;
     }
 
     final titledPlayers = game.players.where((p) => p.title != null).toList();
-    if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
+    if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length && game.status == 'finished') {
       final message = titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
       if (!_shownMessages.contains(message)) {
         _shownMessages.add(message);
@@ -224,7 +237,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             summaryMessage: message,
             gameId: widget.gameId,
             playerId: widget.playerId,
-            onLobbyPressed: () {
+            onHomePressed: () {
               _hasShownNewRoundMessage = false;
               _shownMessages.clear();
               setState(() {
@@ -234,7 +247,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               });
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
                     (route) => false,
               );
             },
@@ -312,7 +325,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         children: [
                           Text(
                             'Assign Joker Value',
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(
+                              fontFamily: "Poppins",
                               fontSize: 20,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[800],
@@ -322,7 +336,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           DropdownButtonFormField<String>(
                             decoration: InputDecoration(
                               labelText: 'Rank',
-                              labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+                              labelStyle: TextStyle(fontFamily: "Poppins", color: Colors.grey[600]),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
@@ -335,7 +349,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'
                             ].map((rank) => DropdownMenuItem(
                               value: rank,
-                              child: Text(rank, style: GoogleFonts.poppins()),
+                              child: Text(rank, style: TextStyle(fontFamily: "Poppins")),
                             )).toList(),
                             onChanged: (value) => setDialogState(() => selectedRank = value),
                           ),
@@ -343,7 +357,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           DropdownButtonFormField<String>(
                             decoration: InputDecoration(
                               labelText: 'Suit',
-                              labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+                              labelStyle: TextStyle(color: Colors.grey[600], fontFamily: "Poppins"),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
@@ -355,7 +369,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             items: ['hearts', 'diamonds', 'clubs', 'spades']
                                 .map((suit) => DropdownMenuItem(
                               value: suit,
-                              child: Text(suit, style: GoogleFonts.poppins()),
+                              child: Text(suit, style: TextStyle(fontFamily: "Poppins")),
                             ))
                                 .toList(),
                             onChanged: (value) => setDialogState(() => selectedSuit = value),
@@ -368,8 +382,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                 onPressed: () => Navigator.of(dialogContext).pop(),
                                 child: Text(
                                   'Cancel',
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.grey[600], fontWeight: FontWeight.w500),
+                                  style: TextStyle(
+                                      color: Colors.grey[600], fontWeight: FontWeight.w500, fontFamily: "Poppins"),
                                 ),
                               ),
                               ElevatedButton(
@@ -388,15 +402,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                     : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blueAccent,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 ),
                                 child: Text(
                                   'OK',
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white, fontWeight: FontWeight.w500),
+                                  style: TextStyle(
+                                      color: Colors.white, fontWeight: FontWeight.w500, fontFamily: "Poppins"),
                                 ),
                               ),
                             ],
@@ -416,7 +428,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Joker assignment cancelled', style: GoogleFonts.poppins()),
+              content: Text('Joker assignment cancelled', style: TextStyle(fontFamily: "Poppins")),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -492,7 +504,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Details card can only be played alone', style: GoogleFonts.poppins()),
+            content: Text('Details card can only be played alone', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -511,7 +523,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Game not loaded', style: GoogleFonts.poppins()),
+            content: Text('Game not loaded', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -528,7 +540,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Player not found in game', style: GoogleFonts.poppins()),
+            content: Text('Player not found in game', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -541,7 +553,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Play cancelled', style: GoogleFonts.poppins()),
+            content: Text('Play cancelled', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -562,7 +574,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Played ${assignedCards.length} cards in test mode', style: GoogleFonts.poppins()),
+            content: Text('Played ${assignedCards.length} cards in test mode', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.green,
           ),
         );
@@ -573,7 +585,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (ws.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Play failed: ${ws.error}', style: GoogleFonts.poppins()),
+            content: Text('Play failed: ${ws.error}', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -593,7 +605,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Game not loaded', style: GoogleFonts.poppins()),
+            content: Text('Game not loaded', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -604,7 +616,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Passing not allowed in test mode', style: GoogleFonts.poppins()),
+            content: Text('Passing not allowed in test mode', style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -615,7 +627,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pass failed: ${ws.error}', style: GoogleFonts.poppins()),
+          content: Text('Pass failed: ${ws.error}', style: TextStyle(fontFamily: "Poppins")),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -623,7 +635,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Passed!', style: GoogleFonts.poppins()),
+          content: Text('Passed!', style: TextStyle(fontFamily: "Poppins")),
           backgroundColor: Colors.green,
         ),
       );
@@ -639,7 +651,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to start game: ${ws.error}', style: GoogleFonts.poppins()),
+          content: Text('Failed to start game: ${ws.error}', style: TextStyle(fontFamily: "Poppins")),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -656,7 +668,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to restart game: ${ws.error}', style: GoogleFonts.poppins()),
+          content: Text('Failed to restart game: ${ws.error}', style: TextStyle(fontFamily: "Poppins")),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -684,7 +696,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Error: $errorMessage', style: GoogleFonts.poppins()),
+                  content: Text('Error: $errorMessage', style: TextStyle(fontFamily: "Poppins")),
                   backgroundColor: Colors.redAccent,
                 ),
               );
@@ -724,7 +736,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   children: [
                     Text(
                       'Waiting for more players to join...',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
+                        fontFamily: "Poppins",
                         fontSize: 20,
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -733,7 +746,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 10),
                     Text(
                       'Players: ${game.players.length}/6',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
+                        fontFamily: "Poppins",
                         fontSize: 16,
                         color: Colors.white70,
                       ),
@@ -741,22 +755,42 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     const SizedBox(height: 10),
                     Text(
                       'Need at least 2 players to start',
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
+                        fontFamily: "Poppins",
                         fontSize: 14,
                         color: Colors.white70,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    AnimatedScaleButton(
-                      onPressed: game.players.length >= 2 ? _handleStartGame : null,
-                      child: Text(
-                        'Start Game',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 16,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedScaleButton(
+                          onPressed: game.players.length >= 2 ? _handleStartGame : null,
+                          child: Text(
+                            'Start Game',
+                            style: TextStyle(
+                              fontFamily: "Poppins",
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 16),
+                        AnimatedScaleButton(
+                          onPressed: _shareGameInvite,
+                          child: Text(
+                            'Invite Players',
+                            style: TextStyle(
+                              fontFamily: "Poppins",
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -775,50 +809,52 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
         if (player.id == 'Unknown') {
           return Scaffold(
-            body: Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Error: Player not found in game',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        ws.connect();
-                        _hasShownNewRoundMessage = false;
-                        _shownMessages.clear();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                      child: Text(
-                        'Return to Lobby',
-                        style: GoogleFonts.poppins(
-                          color: Colors.blueAccent,
+              body: Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Error: Player not found in game',
+                        style: TextStyle(
+                          fontFamily: "Poppins",
+                          fontSize: 20,
+                          color: Colors.redAccent,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          ws.connect();
+                          _hasShownNewRoundMessage = false;
+                          _shownMessages.clear();
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: Text(
+                          'Return to Lobby',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
           );
         }
 
@@ -827,468 +863,504 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             !game.isTestMode &&
             !(game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty);
 
-        return Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-            ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                    child: Column(
-                      children: [
-                        if (game.isTestMode)
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Text(
-                              'Single Player Test: Play cards to test UI',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white70,
-                                fontStyle: FontStyle.italic,
-                                fontSize: 16,
+        return WillPopScope(
+          onWillPop: () async {
+            showCupertinoDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return CupertinoAlertDialog(
+                  title: const Text("Exit Game"),
+                  content: const Text("Are you sure you want to exit the game?"),
+                  actions: <Widget>[
+                    CupertinoDialogAction(
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    CupertinoDialogAction(
+                      isDestructiveAction: true,
+                      child: const Text("Exit"),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+            return false;
+          },
+          child: Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+              ),
+              child: SafeArea(
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                      child: Column(
+                        children: [
+                          if (game.isTestMode)
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Text(
+                                'Single Player Test: Play cards to test UI',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  color: Colors.white70,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
-                          ),
-                        if (game.pile.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          if (game.pile.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(8),
                               child: Text(
                                 _getPatternMessage(game.pile.last, game.currentPattern),
-                                style: GoogleFonts.poppins(
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
                                   color: Colors.white70,
                                   fontStyle: FontStyle.italic,
                                   fontSize: 14,
                                 ),
                               ),
                             ),
-                          ),
-                        const SizedBox(height: 10),
-                        if (!game.isTestMode)
-                          SizedBox(
-                            height: 90,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: game.players.length,
-                              itemBuilder: (context, i) {
-                                final p = game.players[i];
-                                if (p.id == widget.playerId) return const SizedBox.shrink();
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: Container(
-                                    height: 50,
-                                    width: 190,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
-                                      border: p.id == game.players[game.currentTurn].id
-                                          ? Border.all(color: Colors.lightBlueAccent.withOpacity(1), width: 3)
-                                          : null,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                      child: Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 20,
-                                            backgroundColor: Colors.blueAccent.withOpacity(0.3),
-                                            child: Text(
-                                              p.name[0],
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  p.name,
-                                                  style: GoogleFonts.poppins(
-                                                    color: Colors.white,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  '${p.hand.length} cards${p.title != null ? ', ${p.title}' : ''}',
-                                                  style: GoogleFonts.poppins(
-                                                    color: Colors.white70,
-                                                    fontSize: 12,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (p.id == game.players[game.currentTurn].id)
-                                            // const Icon(Icons.timer, color: Colors.yellow, size: 24),
-                                      AnimateIcon(
-                                      key: UniqueKey(),
-                                  onTap: () {},
-                                  iconType: IconType.continueAnimation,
-                                  height: 30,
-                                  width: 30,
-                                  color: Colors.lightBlueAccent,
-                                  animateIcon: AnimateIcons.loading5,
-                                ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        const SizedBox(height: 20),
-                        Container(
-                          height: 157,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: game.pile.isNotEmpty
-                              ? Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: game.pile.last.length,
-                              itemBuilder: (context, i) {
-                                final card = game.pile.last[i];
-                                return Tooltip(
-                                  message: card.isJoker
-                                      ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                      : card.isDetails
-                                      ? 'Details Card'
-                                      : '${card.rank} of ${card.suit}',
-                                  child: CardWidget(card: card),
-                                );
-                              },
-                            ),
-                          )
-                              : Center(
-                            child: Text(
-                              'No cards played',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white70,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          game.isTestMode
-                              ? 'Test Mode: Your turn'
-                              : (isMyTurn
-                              ? 'Your turn!'
-                              : '${game.players[game.currentTurn].name}\'s turn'),
-                          style: GoogleFonts.poppins(
-                            color: isMyTurn ? Colors.greenAccent : Colors.redAccent,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: _scrollController,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return Stack(
-                                    children: [
-                                      Column(
-                                        children: [
-                                          Container(
-                                            constraints: BoxConstraints(maxHeight: constraints.maxHeight),
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(top: 8.0, right: 20),
-                                              child: GridView.builder(
-                                                physics: const NeverScrollableScrollPhysics(),
-                                                shrinkWrap: true,
-                                                itemCount: player.hand.length,
-                                                gridDelegate:
-                                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                                  crossAxisCount: 4,
-                                                  mainAxisSpacing: 4,
-                                                  crossAxisSpacing: 4,
-                                                  childAspectRatio: 3.07 / 4.4,
-                                                ),
-                                                itemBuilder: (context, index) {
-                                                  final card = player.hand[index];
-                                                  return DragTarget<int>(
-                                                    builder: (context, candidateData, rejectedData) {
-                                                      return Draggable<int>(
-                                                        data: index,
-                                                        feedback: Material(
-                                                          type: MaterialType.transparency,
-                                                          elevation: 8,
-                                                          child: Container(
-                                                            color: Colors.transparent,
-                                                            height: 175,
-                                                            width: 120,
-                                                            child: CardWidget(
-                                                                card: card, isSelected: false),
-                                                          ),
-                                                        ),
-                                                        childWhenDragging: Opacity(
-                                                          opacity: 0.3,
-                                                          child: CardWidget(
-                                                            card: card,
-                                                            isSelected: selectedCards.contains(card),
-                                                          ),
-                                                        ),
-                                                        child: GestureDetector(
-                                                          onLongPress: () {
-                                                            showDialog(
-                                                              context: context,
-                                                              barrierDismissible: true,
-                                                              barrierColor: Colors.transparent,
-                                                              builder: (context) => GestureDetector(
-                                                                onTap: () => Navigator.of(context).pop(),
-                                                                child: Dialog(
-                                                                  backgroundColor: Colors.transparent,
-                                                                  elevation: 0,
-                                                                  insetPadding: EdgeInsets.zero,
-                                                                  child: Stack(
-                                                                    children: [
-                                                                      BackdropFilter(
-                                                                        filter: ImageFilter.blur(
-                                                                            sigmaX: 5, sigmaY: 5),
-                                                                        child: Container(
-                                                                          color: Colors.black.withOpacity(0.3),
-                                                                        ),
-                                                                      ),
-                                                                      Center(
-                                                                        child: GestureDetector(
-                                                                          onTap: () {},
-                                                                          child: SizedBox(
-                                                                            height: 460,
-                                                                            width: 310,
-                                                                            child: CardWidget(
-                                                                              card: card,
-                                                                              isSelected: false,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            );
-                                                          },
-                                                          child: AnimatedContainer(
-                                                            duration: const Duration(milliseconds: 200),
-                                                            transform: Matrix4.identity()
-                                                              ..scale(
-                                                                  selectedCards.contains(card) ? 1.1 : 1.0)
-                                                              ..translate(
-                                                                  0.0,
-                                                                  selectedCards.contains(card)
-                                                                      ? -10.0
-                                                                      : 0.0),
-                                                            child: CardWidget(
-                                                              card: card,
-                                                              isSelected: selectedCards.contains(card),
-                                                              onTap: isMyTurn
-                                                                  ? () {
-                                                                setState(() {
-                                                                  if (selectedCards.contains(card)) {
-                                                                    selectedCards.remove(card);
-                                                                  } else {
-                                                                    selectedCards.add(card);
-                                                                  }
-                                                                  _updateScrollThumbVisibility();
-                                                                });
-                                                              }
-                                                                  : null,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                    onAccept: (oldIndex) {
-                                                      setState(() {
-                                                        final card = player.hand.removeAt(oldIndex);
-                                                        player.hand.insert(index, card);
-                                                        final currentHandIds =
-                                                        _lastSentHand.map(_cardId).toList()
-                                                          ..sort();
-                                                        final newHandIds =
-                                                        player.hand.map(_cardId).toList()
-                                                          ..sort();
-                                                        if (currentHandIds != newHandIds) {
-                                                          Provider.of<WebSocketService>(context,
-                                                              listen: false)
-                                                              .updateHandOrder(
-                                                              widget.gameId, widget.playerId, player.hand);
-                                                          _lastSentHand = List.from(player.hand);
-                                                        }
-                                                      });
-                                                    },
-                                                  );
-                                                },
-                                              ),
-                                            ),
+                          const SizedBox(height: 10),
+                          if (!game.isTestMode)
+                            SizedBox(
+                              height: 90,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: game.players.length,
+                                itemBuilder: (context, i) {
+                                  final p = game.players[i];
+                                  if (p.id == widget.playerId) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Container(
+                                      height: 50,
+                                      width: 190,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.1),
+                                        border: p.id == game.players[game.currentTurn].id
+                                            ? Border.all(color: Colors.lightBlueAccent.withOpacity(1), width: 3)
+                                            : null,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
                                           ),
                                         ],
                                       ),
-                                      if (_showScrollThumb)
-                                        Positioned(
-                                          right: 4,
-                                          top: 0,
-                                          bottom: 0,
-                                          child: MouseRegion(
-                                            cursor: SystemMouseCursors.click,
-                                            child: GestureDetector(
-                                              onVerticalDragUpdate: (details) {
-                                                final newOffset = _scrollController.offset +
-                                                    details.delta.dy * 1.5;
-                                                _scrollController.jumpTo(
-                                                  newOffset.clamp(
-                                                      0.0, _scrollController.position.maxScrollExtent),
-                                                );
-                                              },
-                                              child: Container(
-                                                width: 12,
-                                                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white.withOpacity(0.7),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black.withOpacity(0.2),
-                                                      blurRadius: 4,
-                                                      offset: const Offset(0, 2),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: Colors.blueAccent.withOpacity(0.3),
+                                              child: Text(
+                                                p.name[0],
+                                                style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    p.name,
+                                                    style: TextStyle(
+                                                      fontFamily: "Poppins",
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w500,
                                                     ),
-                                                  ],
-                                                ),
-                                                child: const Center(
-                                                  child: Icon(Icons.drag_handle,
-                                                      color: Colors.black54, size: 10),
-                                                ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    '${p.hand.length} cards${p.title != null ? ', ${p.title}' : ''}',
+                                                    style: TextStyle(
+                                                      fontFamily: "Poppins",
+                                                      color: Colors.white70,
+                                                      fontSize: 12,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
+                                            if (p.id == game.players[game.currentTurn].id)
+                                              AnimateIcon(
+                                                key: UniqueKey(),
+                                                onTap: () {},
+                                                iconType: IconType.continueAnimation,
+                                                height: 30,
+                                                width: 30,
+                                                color: Colors.lightBlueAccent,
+                                                animateIcon: AnimateIcons.loading5,
+                                              ),
+                                          ],
                                         ),
-                                    ],
+                                      ),
+                                    ),
                                   );
                                 },
                               ),
                             ),
+                          const SizedBox(height: 20),
+                          Container(
+                            height: 157,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: game.pile.isNotEmpty
+                                ? Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: game.pile.last.length,
+                                itemBuilder: (context, i) {
+                                  final card = game.pile.last[i];
+                                  return Tooltip(
+                                    message: card.isJoker
+                                        ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                        : card.isDetails
+                                        ? 'Details Card'
+                                        : '${card.rank} of ${card.suit}',
+                                    child: CardWidget(card: card),
+                                  );
+                                },
+                              ),
+                            )
+                                : Center(
+                              child: Text(
+                                'No cards played',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  color: Colors.white70,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          spacing: 8,
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Expanded(
-                              child: AnimatedScaleButton(
-                                onPressed: canPass ? _handlePass : null,
-                                child: Text(
-                                  'Pass',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 16,
-                                  ),
+                          const SizedBox(height: 10),
+                          Text(
+                            game.isTestMode
+                                ? 'Test Mode: Your turn'
+                                : (isMyTurn
+                                ? 'Your turn!'
+                                : '${game.players[game.currentTurn].name}\'s turn'),
+                            style: TextStyle(
+                              fontFamily: "Poppins",
+                              color: isMyTurn ? Colors.greenAccent : Colors.redAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return Stack(
+                                      children: [
+                                        Column(
+                                          children: [
+                                            Container(
+                                              constraints: BoxConstraints(maxHeight: constraints.maxHeight),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(top: 8.0, right: 20),
+                                                child: GridView.builder(
+                                                  physics: const NeverScrollableScrollPhysics(),
+                                                  shrinkWrap: true,
+                                                  itemCount: player.hand.length,
+                                                  gridDelegate:
+                                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                                    crossAxisCount: 4,
+                                                    mainAxisSpacing: 4,
+                                                    crossAxisSpacing: 4,
+                                                    childAspectRatio: 3.07 / 4.4,
+                                                  ),
+                                                  itemBuilder: (context, index) {
+                                                    final card = player.hand[index];
+                                                    return DragTarget<int>(
+                                                      builder: (context, candidateData, rejectedData) {
+                                                        return Draggable<int>(
+                                                          data: index,
+                                                          feedback: Material(
+                                                            type: MaterialType.transparency,
+                                                            elevation: 8,
+                                                            child: Container(
+                                                              color: Colors.transparent,
+                                                              height: 175,
+                                                              width: 120,
+                                                              child: CardWidget(
+                                                                  card: card, isSelected: false),
+                                                            ),
+                                                          ),
+                                                          childWhenDragging: Opacity(
+                                                            opacity: 0.3,
+                                                            child: CardWidget(
+                                                              card: card,
+                                                              isSelected: selectedCards.contains(card),
+                                                            ),
+                                                          ),
+                                                          child: GestureDetector(
+                                                            onLongPress: () {
+                                                              showDialog(
+                                                                context: context,
+                                                                barrierDismissible: true,
+                                                                barrierColor: Colors.transparent,
+                                                                builder: (context) => GestureDetector(
+                                                                  onTap: () => Navigator.of(context).pop(),
+                                                                  child: Dialog(
+                                                                    backgroundColor: Colors.transparent,
+                                                                    elevation: 0,
+                                                                    insetPadding: EdgeInsets.zero,
+                                                                    child: Stack(
+                                                                      children: [
+                                                                        BackdropFilter(
+                                                                          filter: ImageFilter.blur(
+                                                                              sigmaX: 5, sigmaY: 5),
+                                                                          child: Container(
+                                                                            color: Colors.black.withOpacity(0.3),
+                                                                          ),
+                                                                        ),
+                                                                        Center(
+                                                                          child: GestureDetector(
+                                                                            onTap: () {},
+                                                                            child: SizedBox(
+                                                                              height: 460,
+                                                                              width: 310,
+                                                                              child: CardWidget(
+                                                                                card: card,
+                                                                                isSelected: false,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                            child: AnimatedContainer(
+                                                              duration: const Duration(milliseconds: 200),
+                                                              transform: Matrix4.identity()
+                                                                ..scale(
+                                                                    selectedCards.contains(card) ? 1.1 : 1.0)
+                                                                ..translate(
+                                                                    0.0,
+                                                                    selectedCards.contains(card)
+                                                                        ? -10.0
+                                                                        : 0.0),
+                                                              child: CardWidget(
+                                                                card: card,
+                                                                isSelected: selectedCards.contains(card),
+                                                                onTap: isMyTurn
+                                                                    ? () {
+                                                                  setState(() {
+                                                                    if (selectedCards.contains(card)) {
+                                                                      selectedCards.remove(card);
+                                                                    } else {
+                                                                      selectedCards.add(card);
+                                                                    }
+                                                                    _updateScrollThumbVisibility();
+                                                                  });
+                                                                }
+                                                                    : null,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      onAccept: (oldIndex) {
+                                                        setState(() {
+                                                          final card = player.hand.removeAt(oldIndex);
+                                                          player.hand.insert(index, card);
+                                                          final currentHandIds =
+                                                          _lastSentHand.map(_cardId).toList()
+                                                            ..sort();
+                                                          final newHandIds =
+                                                          player.hand.map(_cardId).toList()
+                                                            ..sort();
+                                                          if (currentHandIds != newHandIds) {
+                                                            Provider.of<WebSocketService>(context,
+                                                                listen: false)
+                                                                .updateHandOrder(
+                                                                widget.gameId, widget.playerId, player.hand);
+                                                            _lastSentHand = List.from(player.hand);
+                                                          }
+                                                        });
+                                                      },
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (_showScrollThumb)
+                                          Positioned(
+                                            right: 4,
+                                            top: 0,
+                                            bottom: 0,
+                                            child: MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: GestureDetector(
+                                                onVerticalDragUpdate: (details) {
+                                                  final newOffset = _scrollController.offset +
+                                                      details.delta.dy * 1.5;
+                                                  _scrollController.jumpTo(
+                                                    newOffset.clamp(
+                                                        0.0, _scrollController.position.maxScrollExtent),
+                                                  );
+                                                },
+                                                child: Container(
+                                                  width: 12,
+                                                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white.withOpacity(0.7),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.black.withOpacity(0.2),
+                                                        blurRadius: 4,
+                                                        offset: const Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: const Center(
+                                                    child: Icon(Icons.drag_handle,
+                                                        color: Colors.black54, size: 10),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
-                                tooltip: game.isTestMode
-                                    ? 'Passing not allowed in test mode'
-                                    : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
-                                    ? 'Cannot pass as new round starter'
-                                    : '',
                               ),
                             ),
-                            if (_voiceChatService != null)
-                              AnimatedScaleButton(
-                                onPressed: () => _voiceChatService!.toggleMute(),
-                                child: Icon(
-                                  _voiceChatService!.isMuted ? CupertinoIcons.mic_slash_fill : CupertinoIcons.mic_fill,
-                                  color: Colors.white,
-                                  size: 22,
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            spacing: 8,
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: AnimatedScaleButton(
+                                  onPressed: canPass ? _handlePass : null,
+                                  child: Text(
+                                    'Pass',
+                                    style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  tooltip: game.isTestMode
+                                      ? 'Passing not allowed in test mode'
+                                      : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
+                                      ? 'Cannot pass as new round starter'
+                                      : '',
                                 ),
-                                tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
                               ),
-
-                            Expanded(
-                              child: AnimatedScaleButton(
-                                onPressed: isMyTurn && selectedCards.isNotEmpty
-                                    ? () => _playCards(selectedCards)
-                                    : null,
-                                child: Text(
-                                  'Play',
-                                  style: GoogleFonts.poppins(
+                              if (_voiceChatService != null)
+                                AnimatedScaleButton(
+                                  onPressed: () => _voiceChatService!.toggleMute(),
+                                  child: Icon(
+                                    _voiceChatService!.isMuted
+                                        ? CupertinoIcons.mic_slash_fill
+                                        : CupertinoIcons.mic_fill,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 16,
+                                    size: 22,
+                                  ),
+                                  tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
+                                ),
+                              Expanded(
+                                child: AnimatedScaleButton(
+                                  onPressed: isMyTurn && selectedCards.isNotEmpty
+                                      ? () => _playCards(selectedCards)
+                                      : null,
+                                  child: Text(
+                                    'Play',
+                                    style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                           
-
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_showNewRoundNotification && _newRoundMessage != null)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      top: 16,
-                      child: SlideTransition(
-                        position: _notificationAnimation!,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: Text(
-                            _newRoundMessage!,
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
+                        ],
+                      ),
+                    ),
+                    if (_showNewRoundNotification && _newRoundMessage != null)
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        top: 16,
+                        child: SlideTransition(
+                          position: _notificationAnimation!,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            textAlign: TextAlign.center,
+                            child: Text(
+                              _newRoundMessage!,
+                              style: TextStyle(
+                                fontFamily: "Poppins",
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1316,10 +1388,8 @@ class AnimatedScaleButton extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       transform: Matrix4.identity()..scale(onPressed != null ? 1.0 : 0.95),
       child: ElevatedButton(
-
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-
           backgroundColor: onPressed != null ? Colors.blueAccent : Colors.grey,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

@@ -13,7 +13,7 @@ class WebSocketService with ChangeNotifier {
   void Function(String)? onCardExchangeNotification;
 
   WebSocketService() {
-    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
+    socket = IO.io('http://13.203.195.33:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -89,12 +89,17 @@ class WebSocketService with ChangeNotifier {
 
   void joinGame(String gameId, String playerId, String playerName, {bool isTestMode = false}) {
     debugPrint('Joining game: $gameId, player: $playerId, test: $isTestMode');
+    // Reset game state to avoid carrying over previous game data
+    game = null;
+    gameOverSummary = null;
+    error = null;
     socket.emit('join', {
       'gameId': gameId,
       'playerId': playerId,
       'playerName': playerName,
       'isTestMode': isTestMode,
     });
+    notifyListeners();
   }
 
   void startGame(String gameId, String playerId) {
@@ -112,6 +117,7 @@ class WebSocketService with ChangeNotifier {
       'playerId': playerId,
     });
     gameOverSummary = null;
+    notifyListeners();
   }
 
   void playPattern(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {

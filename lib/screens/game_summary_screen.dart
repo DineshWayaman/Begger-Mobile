@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 class GameSummaryScreen extends StatelessWidget {
   final String summaryMessage;
   final String gameId;
   final String playerId;
-  final VoidCallback onLobbyPressed;
+  final VoidCallback onHomePressed;
   final VoidCallback onReplayPressed;
 
   const GameSummaryScreen({
@@ -13,7 +13,7 @@ class GameSummaryScreen extends StatelessWidget {
     required this.summaryMessage,
     required this.gameId,
     required this.playerId,
-    required this.onLobbyPressed,
+    required this.onHomePressed,
     required this.onReplayPressed,
   });
 
@@ -49,7 +49,8 @@ class GameSummaryScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Game Summary',
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
+                      fontFamily: "Poppins",
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -62,7 +63,8 @@ class GameSummaryScreen extends StatelessWidget {
                     child: SingleChildScrollView(
                       child: Text(
                         summaryMessage,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
+                          fontFamily: "Poppins",
                           fontSize: 15,
                           color: Colors.black87,
                           height: 1.5,
@@ -76,7 +78,7 @@ class GameSummaryScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _ClassicButton(
-                        onPressed: onLobbyPressed,
+                        onPressed: onHomePressed,
                         label: 'Lobby',
                         icon: Icons.home,
                         color: Colors.blue,
@@ -120,7 +122,8 @@ class _ClassicButton extends StatelessWidget {
       icon: Icon(icon, size: 20, color: Colors.white),
       label: Text(
         label,
-        style: GoogleFonts.poppins(
+        style: TextStyle(
+          fontFamily: "Poppins",
           fontWeight: FontWeight.w500,
           fontSize: 15,
           color: Colors.white,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AnimatedMenuButton extends StatefulWidget {
   final String label;
@@ -46,8 +45,8 @@ class _AnimatedMenuButtonState extends State<AnimatedMenuButton> with SingleTick
               color: _isHovered ? Colors.blueAccent.shade700 : Colors.black.withOpacity(0.6),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withOpacity(_isHovered ? 0.9 : 0.4),
-                width: 1.5,
+                color: Colors.white.withOpacity(_isHovered ? 0.4 : 0.8),
+                width: 3,
               ),
               boxShadow: [
                 BoxShadow(
@@ -60,7 +59,8 @@ class _AnimatedMenuButtonState extends State<AnimatedMenuButton> with SingleTick
             child: Center(
               child: Text(
                 widget.label,
-                style: GoogleFonts.poppins(
+                style: TextStyle(
+                  fontFamily: "Poppins",
                   color: widget.label == 'Quit'
                       ? Colors.red
                       : Colors.white,

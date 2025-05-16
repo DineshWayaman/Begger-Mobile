@@ -1,12 +1,16 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../services/websocket.dart';
 import '../widgets/custom_text_field.dart';
 import 'game.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class LobbyScreen extends StatefulWidget {
-  const LobbyScreen({super.key});
+  final String? playerName;
+
+  const LobbyScreen({super.key, this.playerName});
 
   @override
   _LobbyScreenState createState() => _LobbyScreenState();
@@ -14,8 +18,34 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   final _gameIdController = TextEditingController();
-  final _playerNameController = TextEditingController();
+  late final TextEditingController _playerNameController;
   bool isTestMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerNameController = TextEditingController(text: widget.playerName);
+    _gameIdController.text = _generateGameId();
+  }
+
+  String _generateGameId() {
+    const uuid = Uuid();
+    // Generate a UUID and take the first 8 characters for brevity
+    return uuid.v4().replaceAll('-', '').substring(0, 8).toUpperCase();
+  }
+
+  void _copyGameId() {
+    Clipboard.setData(ClipboardData(text: _gameIdController.text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Game ID copied to clipboard',
+          style: TextStyle(fontFamily: "Poppins"),
+        ),
+        backgroundColor: Colors.green.shade400,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +53,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-          // gradient: LinearGradient(
-          //   begin: Alignment.topLeft,
-          //   end: Alignment.bottomRight,
-          //   colors: [Colors.blue.shade300, Colors.purple.shade400],
-          // ),
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/beggarbg.png'),
+            fit: BoxFit.cover,
+          ),
         ),
         child: SafeArea(
           child: Center(
@@ -49,12 +77,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           GestureDetector(
-                              onTap: () => Navigator.pop(context),
-                              child: Icon(Icons.arrow_back_ios_new_rounded,color: Colors.blue.shade900,size: 40,)),
-                          SizedBox(width:  8,),
+                            onTap: () => Navigator.pop(context),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.blue.shade900,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             'Beggar',
-                            style: GoogleFonts.roboto(
+                            style: TextStyle(
+                              fontFamily: "Poppins",
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
                               color: Colors.blue.shade900,
@@ -66,40 +100,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       CustomTextField(
                         controller: _playerNameController,
                         hint: 'Your Name',
-
+                        isReadOnly: true,
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
                         controller: _gameIdController,
                         hint: 'Game ID',
-
+                        isReadOnly: false,
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.copy, color: Colors.blue.shade900),
+                          onPressed: _copyGameId,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      // CheckboxListTile(
-                      //   title: Text(
-                      //     'Test Mode (Single Player)',
-                      //     style: GoogleFonts.roboto(fontSize: 16),
-                      //   ),
-                      //   value: isTestMode,
-                      //   onChanged: (value) => setState(() => isTestMode = value!),
-                      //   activeColor: Colors.blue.shade700,
-                      //   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      // ),
+                      Text(
+                        "Copy this Game ID and share it with your friends or Paste your friend's Game ID",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       GestureDetector(
                         onTap: () {
                           final name = _playerNameController.text.trim().isEmpty
                               ? 'Player'
                               : _playerNameController.text.trim();
-                          final gameId = _gameIdController.text.trim().isEmpty
-                              ? DateTime.now().toString()
-                              : _gameIdController.text.trim();
+                          final gameId = _gameIdController.text.trim();
                           if (name.length > 20) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   'Name must be 20 characters or less',
-                                  style: GoogleFonts.roboto(),
+                                  style: TextStyle(
+                                    fontFamily: "Poppins",
+                                  ),
                                 ),
                                 backgroundColor: Colors.red.shade400,
                               ),
@@ -107,9 +142,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             return;
                           }
                           final playerId = '$gameId-$name';
+                          // Reset WebSocketService state before joining
                           websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
                           websocket.requestGameState(gameId);
-                          Navigator.push(
+                          Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
                               builder: (_) => GameScreen(gameId: gameId, playerId: playerId),
@@ -136,7 +172,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           child: Center(
                             child: Text(
                               'Join/Create Game',
-                              style: GoogleFonts.roboto(
+                              style: TextStyle(
+                                fontFamily: "Poppins",
                                 fontSize: 18,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
