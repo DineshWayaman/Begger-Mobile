@@ -1,3 +1,4 @@
+import 'package:begger_card_game/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/lobby.dart';
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Card Game',
         theme: ThemeData(primarySwatch: Colors.blue),
-        home: const LobbyScreen(),
+        home: const HomeScreen(),
       ),
     );
   }

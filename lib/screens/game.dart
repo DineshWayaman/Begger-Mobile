@@ -1,5 +1,8 @@
+import 'dart:math';
 import 'dart:ui';
+import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/models/player.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -870,7 +873,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         const SizedBox(height: 10),
                         if (!game.isTestMode)
                           SizedBox(
-                            height: 100,
+                            height: 90,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: game.players.length,
@@ -881,9 +884,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   padding: const EdgeInsets.only(right: 8.0),
                                   child: Container(
                                     height: 50,
-                                    width: 180,
+                                    width: 190,
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.1),
+                                      border: p.id == game.players[game.currentTurn].id
+                                          ? Border.all(color: Colors.lightBlueAccent.withOpacity(1), width: 3)
+                                          : null,
                                       borderRadius: BorderRadius.circular(12),
                                       boxShadow: [
                                         BoxShadow(
@@ -936,7 +942,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                             ),
                                           ),
                                           if (p.id == game.players[game.currentTurn].id)
-                                            const Icon(Icons.timer, color: Colors.yellow, size: 24),
+                                            // const Icon(Icons.timer, color: Colors.yellow, size: 24),
+                                      AnimateIcon(
+                                      key: UniqueKey(),
+                                  onTap: () {},
+                                  iconType: IconType.continueAnimation,
+                                  height: 30,
+                                  width: 30,
+                                  color: Colors.lightBlueAccent,
+                                  animateIcon: AnimateIcons.loading5,
+                                ),
                                         ],
                                       ),
                                     ),
@@ -1187,46 +1202,55 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         ),
                         const SizedBox(height: 10),
                         Row(
+                          spacing: 8,
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            AnimatedScaleButton(
-                              onPressed: isMyTurn && selectedCards.isNotEmpty
-                                  ? () => _playCards(selectedCards)
-                                  : null,
-                              child: Text(
-                                'Play',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                            Expanded(
+                              child: AnimatedScaleButton(
+                                onPressed: canPass ? _handlePass : null,
+                                child: Text(
+                                  'Pass',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
                                 ),
+                                tooltip: game.isTestMode
+                                    ? 'Passing not allowed in test mode'
+                                    : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
+                                    ? 'Cannot pass as new round starter'
+                                    : '',
                               ),
-                            ),
-                            AnimatedScaleButton(
-                              onPressed: canPass ? _handlePass : null,
-                              child: Text(
-                                'Pass',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              tooltip: game.isTestMode
-                                  ? 'Passing not allowed in test mode'
-                                  : (game.pile.isEmpty && game.passCount == 0 && player.hand.isNotEmpty)
-                                  ? 'Cannot pass as new round starter'
-                                  : '',
                             ),
                             if (_voiceChatService != null)
                               AnimatedScaleButton(
                                 onPressed: () => _voiceChatService!.toggleMute(),
                                 child: Icon(
-                                  _voiceChatService!.isMuted ? Icons.mic_off : Icons.mic,
+                                  _voiceChatService!.isMuted ? CupertinoIcons.mic_slash_fill : CupertinoIcons.mic_fill,
                                   color: Colors.white,
+                                  size: 22,
                                 ),
                                 tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
                               ),
+
+                            Expanded(
+                              child: AnimatedScaleButton(
+                                onPressed: isMyTurn && selectedCards.isNotEmpty
+                                    ? () => _playCards(selectedCards)
+                                    : null,
+                                child: Text(
+                                  'Play',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                           
+
                           ],
                         ),
                       ],
@@ -1292,8 +1316,10 @@ class AnimatedScaleButton extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       transform: Matrix4.identity()..scale(onPressed != null ? 1.0 : 0.95),
       child: ElevatedButton(
+
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
+
           backgroundColor: onPressed != null ? Colors.blueAccent : Colors.grey,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

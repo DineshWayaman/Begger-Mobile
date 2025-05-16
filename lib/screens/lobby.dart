@@ -45,13 +45,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Beggar',
-                        style: GoogleFonts.roboto(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade900,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Icon(Icons.arrow_back_ios_new_rounded,color: Colors.blue.shade900,size: 40,)),
+                          SizedBox(width:  8,),
+                          Text(
+                            'Beggar',
+                            style: GoogleFonts.roboto(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade900,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       CustomTextField(
@@ -66,16 +75,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
                       ),
                       const SizedBox(height: 16),
-                      CheckboxListTile(
-                        title: Text(
-                          'Test Mode (Single Player)',
-                          style: GoogleFonts.roboto(fontSize: 16),
-                        ),
-                        value: isTestMode,
-                        onChanged: (value) => setState(() => isTestMode = value!),
-                        activeColor: Colors.blue.shade700,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
+                      // CheckboxListTile(
+                      //   title: Text(
+                      //     'Test Mode (Single Player)',
+                      //     style: GoogleFonts.roboto(fontSize: 16),
+                      //   ),
+                      //   value: isTestMode,
+                      //   onChanged: (value) => setState(() => isTestMode = value!),
+                      //   activeColor: Colors.blue.shade700,
+                      //   contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      // ),
                       const SizedBox(height: 24),
                       GestureDetector(
                         onTap: () {
