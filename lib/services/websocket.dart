@@ -111,7 +111,7 @@ class WebSocketService with ChangeNotifier {
       'gameId': gameId,
       'playerId': playerId,
     });
-    gameOverSummary = null; // Clear game over summary on restart
+    gameOverSummary = null;
   }
 
   void playPattern(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {

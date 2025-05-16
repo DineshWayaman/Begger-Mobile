@@ -3,9 +3,11 @@ import 'package:begger_card_game/models/player.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/game.dart';
 import '../models/card.dart';
 import '../services/websocket.dart';
+import '../services/voice_chat_service.dart';
 import '../widgets/card_widget.dart';
 import 'lobby.dart';
 import 'game_summary_screen.dart';
@@ -35,6 +37,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   String? _newRoundMessage;
   bool _isRestarted = false;
   bool _isReplayInitiator = false;
+  VoiceChatService? _voiceChatService;
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       parent: _notificationController!,
       curve: Curves.easeInOut,
     ));
+    _initializeVoiceChat();
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _updateScrollThumbVisibility();
     });
@@ -69,6 +73,26 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     };
   }
 
+  Future<void> _initializeVoiceChat() async {
+    final permissionStatus = await Permission.microphone.request();
+    if (permissionStatus.isGranted) {
+      final ws = Provider.of<WebSocketService>(context, listen: false);
+      _voiceChatService = VoiceChatService(ws, widget.gameId, widget.playerId);
+      _voiceChatService!.addListener(() {
+        if (mounted) setState(() {});
+      });
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Microphone permission denied. Voice chat disabled.', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void didUpdateWidget(GameScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -79,6 +103,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void dispose() {
     _scrollController.dispose();
     _notificationController?.dispose();
+    _voiceChatService?.dispose();
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.removeListener(_onGameStateChanged);
     ws.onDismissDialog = null;
@@ -93,7 +118,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // Debug: Log the starting player
     debugPrint('Game state updated. Current turn: ${game.currentTurn}, Player: ${game.players[game.currentTurn].name}');
 
     if (!_hasShownNewRoundMessage && game.status != 'waiting' && game.pile.isEmpty && game.passCount == 0) {
@@ -166,14 +190,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final game = ws.game;
     if (game == null || _isDialogShowing || _isRestarted) return;
 
-    // Check for gameOverSummary first
     if (ws.gameOverSummary != null && !_shownMessages.contains(ws.gameOverSummary)) {
       _shownMessages.add(ws.gameOverSummary!);
       _showGameSummaryScreen(ws.gameOverSummary!);
       return;
     }
 
-    // Fallback to checking titled players
     final titledPlayers = game.players.where((p) => p.title != null).toList();
     if (titledPlayers.isNotEmpty && titledPlayers.length == game.players.length) {
       final message = titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
@@ -624,7 +646,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   void _handleRestartGame() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
-    // Pop the GameSummaryScreen locally for the initiator
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     }
@@ -645,6 +666,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _lastSentHand = [];
         _lastJokerMessage = null;
       });
+      _initializeVoiceChat(); // Reinitialize voice chat for new game
     }
   }
 
@@ -1196,6 +1218,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   ? 'Cannot pass as new round starter'
                                   : '',
                             ),
+                            if (_voiceChatService != null)
+                              AnimatedScaleButton(
+                                onPressed: () => _voiceChatService!.toggleMute(),
+                                child: Icon(
+                                  _voiceChatService!.isMuted ? Icons.mic_off : Icons.mic,
+                                  color: Colors.white,
+                                ),
+                                tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
+                              ),
                           ],
                         ),
                       ],
