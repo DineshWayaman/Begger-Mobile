@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:uuid/uuid.dart';
@@ -11,14 +13,46 @@ class VoiceChatService with ChangeNotifier {
   webrtc.MediaStream? localStream;
   bool isMuted = false;
   final String connectionId = const Uuid().v4();
-  final Map<String, dynamic> _iceServers = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-    ]
-  };
+  late final Map<String, dynamic> _iceServers;
+
+  // Coturn server configuration
+  static const String _coturnIp = '65.2.83.124'; // Your EC2 public IP
+  static const String _turnSecret = 'begger5gr7yu5kusd5'; // From turnserver.conf (e.g., mysecurekey123)
 
   VoiceChatService(this._webSocketService, this.gameId, this.playerId) {
+    _initializeIceServers();
     _initialize();
+  }
+
+  // Generate time-limited TURN credentials
+  Map<String, String> _generateTurnCredentials(String username, String secret, {int ttl = 86400}) {
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + ttl;
+    final turnUsername = '$timestamp:$username';
+    final key = utf8.encode(secret);
+    final input = utf8.encode(turnUsername);
+    final hmacSha1 = Hmac(sha1, key);
+    final digest = hmacSha1.convert(input);
+    final credential = base64.encode(digest.bytes);
+    return {'username': turnUsername, 'credential': credential};
+  }
+
+  // Initialize ICE servers with Coturn configuration
+  void _initializeIceServers() {
+    final credentials = _generateTurnCredentials(playerId, _turnSecret);
+    _iceServers = {
+      'iceServers': [
+        {'urls': 'stun:$_coturnIp:3478'},
+        {
+          'urls': [
+            'turn:$_coturnIp:3478?transport=udp',
+            'turn:$_coturnIp:3478?transport=tcp',
+          ],
+          'username': credentials['username'],
+          'credential': credentials['credential'],
+        },
+        {'urls': 'stun:stun.l.google.com:19302'}, // Fallback STUN server
+      ]
+    };
   }
 
   Future<void> _initialize() async {
@@ -90,7 +124,7 @@ class VoiceChatService with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error creating peer connection: $e');
-      rethrow; // Rethrow for debugging
+      rethrow;
     }
   }
 
@@ -105,13 +139,11 @@ class VoiceChatService with ChangeNotifier {
       return;
     }
 
-    // For newVoiceParticipant, toConnectionId is not required as it's a broadcast
     if (type != 'newVoiceParticipant' && toConnectionId == null) {
       debugPrint('Invalid signaling data (missing toConnectionId): $data');
       return;
     }
 
-    // Verify toConnectionId for non-broadcast events
     if (type != 'newVoiceParticipant' && toConnectionId != connectionId) {
       return;
     }

@@ -33,7 +33,7 @@ dependencies:
   provider: ^6.0.5
   socket_io_client: ^2.0.3+1
   flutter_svg: ^2.0.9
-  flutter_webrtc: ^0.10.8
+  flutter_webrtc: ^0.14.0
   permission_handler: ^11.3.1
   uuid: ^4.5.0
 
