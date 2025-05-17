@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:animated_icon/animated_icon.dart';
+import 'package:begger_card_game/widgets/about_game_bottomsheet.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -291,39 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         AnimatedMenuButton(
                           label: 'About Game',
                           onTap: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: true,
-                              barrierColor: Colors.transparent,
-                              builder: (context) => GestureDetector(
-                                onTap: () => Navigator.of(context).pop(),
-                                child: Dialog(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  insetPadding: EdgeInsets.zero,
-                                  child: Stack(
-                                    children: [
-                                      BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                        child: Container(
-                                          color: Colors.black.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      Center(
-                                        child: GestureDetector(
-                                          onTap: () {},
-                                          child: SizedBox(
-                                            height: 460,
-                                            width: 310,
-                                            child: Image.asset("assets/cards/info_card.png"),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
+                            showAboutGameBottomSheet(context);
                           },
                         ),
 

@@ -40,10 +40,10 @@ class _AnimatedMenuButtonState extends State<AnimatedMenuButton> with SingleTick
           curve: Curves.easeOut,
           child: Container(
             width: 260,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
               color: _isHovered ? Colors.blueAccent.shade700 : Colors.black.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(100),
               border: Border.all(
                 color: Colors.white.withOpacity(_isHovered ? 0.4 : 0.8),
                 width: 3,

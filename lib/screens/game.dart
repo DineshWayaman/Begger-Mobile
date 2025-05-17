@@ -777,6 +777,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             ),
                           ),
                         ),
+
                         const SizedBox(width: 16),
                         AnimatedScaleButton(
                           onPressed: _shareGameInvite,
@@ -792,6 +793,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         ),
                       ],
                     ),
+                    SizedBox(height: 10,),
+                    if (_voiceChatService != null)
+                      AnimatedScaleButton(
+                        onPressed: () => _voiceChatService!.toggleMute(),
+                        tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
+                        child: Icon(
+                          _voiceChatService!.isMuted
+                              ? CupertinoIcons.mic_slash_fill
+                              : CupertinoIcons.mic_fill,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
                   ],
                 ),
               ),
