@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/animated_button.dart';
+import '../widgets/terms_conditions_bottomsheet.dart';
 import 'lobby.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -338,39 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         AnimatedMenuButton(
                           label: 'Terms & Conditions',
                           onTap: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: true,
-                              barrierColor: Colors.transparent,
-                              builder: (context) => GestureDetector(
-                                onTap: () => Navigator.of(context).pop(),
-                                child: Dialog(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  insetPadding: EdgeInsets.zero,
-                                  child: Stack(
-                                    children: [
-                                      BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                        child: Container(
-                                          color: Colors.black.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      Center(
-                                        child: GestureDetector(
-                                          onTap: () {},
-                                          child: SizedBox(
-                                            height: 460,
-                                            width: 310,
-                                            child: Image.asset("assets/cards/info_card.png"),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
+                            showTermsAndConditionsBottomSheet(context);
                           },
                         ),
 
