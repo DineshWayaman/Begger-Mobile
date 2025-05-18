@@ -45,7 +45,7 @@ class WebSocketService with ChangeNotifier {
       debugPrint('Received dismissDialog event');
       if (onDismissDialog != null) {
         onDismissDialog!();
-      }
+    }
       notifyListeners();
     });
 
@@ -118,6 +118,14 @@ class WebSocketService with ChangeNotifier {
     });
     gameOverSummary = null;
     notifyListeners();
+  }
+
+  void leaveGame(String gameId, String playerId) {
+    debugPrint('Leaving game: $gameId, player: $playerId');
+    socket.emit('leaveGame', {
+      'gameId': gameId,
+      'playerId': playerId,
+    });
   }
 
   void playPattern(String gameId, String playerId, List<Cards> cards, List<Cards> hand) {

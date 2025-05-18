@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
+import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/models/player.dart';
 import 'package:begger_card_game/screens/home_screen.dart';
+import 'package:begger_card_game/widgets/leave_button.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -79,6 +81,26 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         }
       }
     };
+    // Listen for gameEnded event
+    ws.socket.on('gameEnded', (data) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'], style: TextStyle(fontFamily: "Poppins")),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _hasShownNewRoundMessage = false;
+        _shownMessages.clear();
+        //need to end voice chat service
+        _voiceChatService?.dispose();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    });
   }
 
   Future<void> _initializeVoiceChat() async {
@@ -108,6 +130,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _handleLeaveGame() {
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.leaveGame(widget.gameId, widget.playerId);
+    _hasShownNewRoundMessage = false;
+    _shownMessages.clear();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   @override
   void didUpdateWidget(GameScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -122,6 +155,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.removeListener(_onGameStateChanged);
     ws.onDismissDialog = null;
+    ws.socket.off('gameEnded');
     super.dispose();
   }
 
@@ -730,84 +764,126 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               decoration: BoxDecoration(
                 image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
               ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Waiting for more players to join...',
-                      style: TextStyle(
-                        fontFamily: "Poppins",
-                        fontSize: 20,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Players: ${game.players.length}/6',
-                      style: TextStyle(
-                        fontFamily: "Poppins",
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Need at least 2 players to start',
-                      style: TextStyle(
-                        fontFamily: "Poppins",
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+              child: Stack(
+                children: [
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        AnimatedScaleButton(
-                          onPressed: game.players.length >= 2 ? _handleStartGame : null,
-                          child: Text(
-                            'Start Game',
-                            style: TextStyle(
-                              fontFamily: "Poppins",
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
+                        Text(
+                          'Waiting for more players to join...',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            fontSize: 20,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-
-                        const SizedBox(width: 16),
-                        AnimatedScaleButton(
-                          onPressed: _shareGameInvite,
-                          child: Text(
-                            'Invite Players',
-                            style: TextStyle(
-                              fontFamily: "Poppins",
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                            ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Players: ${game.players.length}/6',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            fontSize: 16,
+                            color: Colors.white70,
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Need at least 2 players to start',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            fontSize: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedScaleButton(
+                              onPressed: game.players.length >= 2 ? _handleStartGame : null,
+                              child: Text(
+                                'Start Game',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            AnimatedScaleButton(
+                              onPressed: _shareGameInvite,
+                              child: Text(
+                                'Invite Players',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10,),
+                        if (_voiceChatService != null)
+                          AnimatedScaleButton(
+                            onPressed: () => _voiceChatService!.toggleMute(),
+                            tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
+                            child: Icon(
+                              _voiceChatService!.isMuted
+                                  ? CupertinoIcons.mic_slash_fill
+                                  : CupertinoIcons.mic_fill,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
                       ],
                     ),
-                    SizedBox(height: 10,),
-                    if (_voiceChatService != null)
-                      AnimatedScaleButton(
-                        onPressed: () => _voiceChatService!.toggleMute(),
-                        tooltip: _voiceChatService!.isMuted ? 'Unmute' : 'Mute',
-                        child: Icon(
-                          _voiceChatService!.isMuted
-                              ? CupertinoIcons.mic_slash_fill
-                              : CupertinoIcons.mic_fill,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
+                  Positioned(
+                    top: 40,
+                    left: 16,
+                    child: LeaveButton(
+                      onPressed: (){
+                        showCupertinoDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return CupertinoAlertDialog(
+                              title: const Text("Leave Game"),
+                              content: const Text("Are you sure you want to Leave the game?"),
+                              actions: <Widget>[
+                                CupertinoDialogAction(
+                                  child: const Text(
+                                    "Cancel",
+                                    style: TextStyle(
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                CupertinoDialogAction(
+                                  isDestructiveAction: true,
+                                  child: const Text("Leave"),
+                                  onPressed: () {
+                                    _handleLeaveGame();
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      tooltip: 'Leave Game',
+
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -823,52 +899,52 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
         if (player.id == 'Unknown') {
           return Scaffold(
-              body: Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Error: Player not found in game',
+            body: Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(image: AssetImage('assets/images/beggarbg.png'), fit: BoxFit.cover),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Error: Player not found in game',
+                      style: TextStyle(
+                        fontFamily: "Poppins",
+                        fontSize: 20,
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        ws.connect();
+                        _hasShownNewRoundMessage = false;
+                        _shownMessages.clear();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: Text(
+                        'Return to Lobby',
                         style: TextStyle(
                           fontFamily: "Poppins",
-                          fontSize: 20,
-                          color: Colors.redAccent,
+                          color: Colors.blueAccent,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          ws.connect();
-                          _hasShownNewRoundMessage = false;
-                          _shownMessages.clear();
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const LobbyScreen()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                        child: Text(
-                          'Return to Lobby',
-                          style: TextStyle(
-                            fontFamily: "Poppins",
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ),
           );
         }
 
@@ -883,7 +959,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               context: context,
               builder: (BuildContext context) {
                 return CupertinoAlertDialog(
-                  title: const Text("Exit Game"),
+                  title: const Text("Leave Game"),
                   content: const Text("Are you sure you want to exit the game?"),
                   actions: <Widget>[
                     CupertinoDialogAction(
@@ -899,10 +975,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     ),
                     CupertinoDialogAction(
                       isDestructiveAction: true,
-                      child: const Text("Exit"),
+                      child: const Text("Leave"),
                       onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
+                        _handleLeaveGame();
                       },
                     ),
                   ],
@@ -922,7 +997,78 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                       child: Column(
+
                         children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start ,
+                            children: [
+                              LeaveButton(
+                                onPressed: (){
+                                  showCupertinoDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return CupertinoAlertDialog(
+                                        title: const Text("Leave Game"),
+                                        content: const Text("Are you sure you want to Leave the game?"),
+                                        actions: <Widget>[
+                                          CupertinoDialogAction(
+                                            child: const Text(
+                                              "Cancel",
+                                              style: TextStyle(
+                                                color: Colors.blueAccent,
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                          CupertinoDialogAction(
+                                            isDestructiveAction: true,
+                                            child: const Text("Leave"),
+                                            onPressed: () {
+                                              _handleLeaveGame();
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                tooltip: 'Leave Game',
+
+                              ),
+                              //Display GameId
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.lightGreenAccent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.games_outlined,
+                                        color: Colors.black,
+                                        size: 30,
+                                      ),
+                                      SizedBox(width: 5,),
+                                      Text(
+                                        'ID: ${widget.gameId}',
+                                        style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           if (game.isTestMode)
                             Padding(
                               padding: const EdgeInsets.all(8),
@@ -947,12 +1093,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   fontStyle: FontStyle.italic,
                                   fontSize: 14,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 5),
                           if (!game.isTestMode)
                             SizedBox(
-                              height: 90,
+                              height: 80,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: game.players.length,
@@ -1049,32 +1196,40 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: game.pile.isNotEmpty
-                                ? Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: game.pile.last.length,
-                                itemBuilder: (context, i) {
-                                  final card = game.pile.last[i];
-                                  return Tooltip(
-                                    message: card.isJoker
-                                        ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                        : card.isDetails
-                                        ? 'Details Card'
-                                        : '${card.rank} of ${card.suit}',
-                                    child: CardWidget(card: card),
-                                  );
-                                },
-                              ),
-                            )
+                                ? ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: game.pile.last.length,
+                                  itemBuilder: (context, i) {
+                                    final card = game.pile.last[i];
+                                    return Tooltip(
+                                      message: card.isJoker
+                                          ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                          : card.isDetails
+                                          ? 'Details Card'
+                                          : '${card.rank} of ${card.suit}',
+                                      child: CardWidget(card: card),
+                                    );
+                                  },
+                                )
                                 : Center(
-                              child: Text(
-                                'No cards played',
-                                style: TextStyle(
-                                  fontFamily: "Poppins",
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'No cards played',
+                                    style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      color: Colors.white70,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4,),
+                                  AnimatedEmoji(
+                                    AnimatedEmojis.sad,
+                                    size: 30,
+
+                                  ),
+                                ],
                               ),
                             ),
                           ),

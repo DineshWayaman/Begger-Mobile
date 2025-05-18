@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
     <string>We need microphone access for voice chat during the game.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app saves game summaries to your gallery</string>
 </dict>
 </plist>

@@ -43,6 +43,10 @@ dependencies:
   animated_icon: ^0.0.9
   shared_preferences: ^2.5.3
   share_plus: ^10.0.0
+  animated_emoji: ^3.2.1
+  screenshot: ^3.0.0
+  path_provider: ^2.1.2
+  image_gallery_saver_plus: ^4.0.1
 
 
 dev_dependencies:

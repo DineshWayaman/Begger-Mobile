@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/widgets/about_game_bottomsheet.dart';
 import 'package:flutter/cupertino.dart';
@@ -234,40 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     // Player Name with Edit Icon
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
 
-
-                        Text(
-                          "Welcome $_playerName",
-                          style:TextStyle(
-                            fontFamily: "Poppins",
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            shadows: [
-                              const Shadow(
-                                color: Colors.black,
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-
-                        AnimateIcon(
-                          key: UniqueKey(),
-                          onTap:() => _showNameDialog(initialName: _playerName),
-                          iconType: IconType.continueAnimation,
-                          height: 24,
-                          width: 24,
-                          color: Colors.white,
-                          animateIcon: AnimateIcons.edit,
-                        ),
-                      ],
-                    ),
 
                     Image.asset(
                       "assets/images/beggarlogo.png",
@@ -297,44 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
 
-                        AnimatedMenuButton(
-                          label: 'Credits',
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: true,
-                              barrierColor: Colors.transparent,
-                              builder: (context) => GestureDetector(
-                                onTap: () => Navigator.of(context).pop(),
-                                child: Dialog(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  insetPadding: EdgeInsets.zero,
-                                  child: Stack(
-                                    children: [
-                                      BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                        child: Container(
-                                          color: Colors.black.withOpacity(0.3),
-                                        ),
-                                      ),
-                                      Center(
-                                        child: GestureDetector(
-                                          onTap: () {},
-                                          child: SizedBox(
-                                            height: 460,
-                                            width: 310,
-                                            child: Image.asset("assets/cards/info_card.png"),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+
 
                         AnimatedMenuButton(
                           label: 'Terms & Conditions',
@@ -414,6 +345,44 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            Positioned(
+              top: 40,
+              left: 0,
+              right: 0,
+              child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+
+                const SizedBox(width: 4),
+                Text(
+                  "Welcome $_playerName",
+                  style:TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    shadows: [
+                      const Shadow(
+                        color: Colors.black,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  onTap: () => _showNameDialog(initialName: _playerName),
+                  child: AnimatedEmoji(
+                    AnimatedEmojis.writingHand,
+                    size: 25,
+
+
+                  ),
+                ),
+
+              ],
+            ),)
           ],
         ),
       ),
