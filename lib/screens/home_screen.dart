@@ -6,6 +6,7 @@ import 'package:begger_card_game/widgets/about_game_bottomsheet.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/animated_button.dart';
 import '../widgets/terms_conditions_bottomsheet.dart';
@@ -271,6 +272,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: 'Terms & Conditions',
                           onTap: () {
                             showTermsAndConditionsBottomSheet(context);
+                          },
+                        ),
+                        AnimatedMenuButton(
+                          label: 'Invite Friends',
+                          onTap: () {
+                            final String message =
+                                "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.beggar.cardgame";
+                            Share.share(
+                              message,
+                              subject: "Check out this game!",
+                            );
                           },
                         ),
 

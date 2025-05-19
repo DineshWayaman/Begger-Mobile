@@ -286,6 +286,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               );
             },
             onReplayPressed: () {
+
               setState(() {
                 _isDialogShowing = false;
                 _isRestarted = true;
@@ -759,277 +760,315 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         }
 
         if (game.status == 'waiting') {
-          return Scaffold(
-            body: Stack(
-              children: [
-                // Background Image
-                Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/beggarbg.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-
-                // Main content
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          child: LeaveButton(
-                            onPressed: (){
-                              showCupertinoDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return CupertinoAlertDialog(
-                                    title: const Text("Leave Game"),
-                                    content: const Text("Are you sure you want to Leave the game?"),
-                                    actions: <Widget>[
-                                      CupertinoDialogAction(
-                                        child: const Text(
-                                          "Cancel",
-                                          style: TextStyle(
-                                            color: Colors.blueAccent,
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                      ),
-                                      CupertinoDialogAction(
-                                        isDestructiveAction: true,
-                                        child: const Text("Leave"),
-                                        onPressed: () {
-                                          _handleLeaveGame();
-                                        },
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                            tooltip: 'Leave Game',
-
+          return WillPopScope(
+            onWillPop: () async {
+              showCupertinoDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return CupertinoAlertDialog(
+                    title: const Text("Leave Game"),
+                    content: const Text("Are you sure you want to exit the game?"),
+                    actions: <Widget>[
+                      CupertinoDialogAction(
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(
+                            color: Colors.blueAccent,
                           ),
                         ),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: 500,
-                            minHeight: MediaQuery.of(context).size.height - 40,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              SizedBox(height: 50,),
-                              // Header with leave button
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      CupertinoDialogAction(
+                        isDestructiveAction: true,
+                        child: const Text("Leave"),
+                        onPressed: () {
+                          _handleLeaveGame();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+              return false;
+            },
+            child: Scaffold(
+              body: Stack(
+                children: [
+                  // Background Image
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/beggarbg.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+
+
+                  // Main content
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Stack(
+                        children: [
+
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 500,
+                              minHeight: MediaQuery.of(context).size.height - 40,
+                            ),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Waiting Room',
-                                    style: TextStyle(
-                                      fontFamily: "Poppins",
-                                      fontSize: 28,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4,),
-                                  AnimatedDots(),
-                                ],
-                              ),
-
-
-                                  SizedBox(height: 20,),
-                              // Player count with circular progress
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 150,
-                                    height: 150,
-                                    child: CircularProgressIndicator(
-
-                                      value: (game.players.length / 6).clamp(0.0, 1.0), // Fixed: Clamped value
-                                      strokeWidth: 10,
-                                      backgroundColor: Colors.white.withOpacity(0.2),
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.amber.shade600),
-                                    ),
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
+                                  SizedBox(height: 50,),
+                                  // Header with leave button
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        '${game.players.length}',
+                                        'Waiting Room',
                                         style: TextStyle(
                                           fontFamily: "Poppins",
-                                          fontSize: 45,
+                                          fontSize: 28,
                                           color: Colors.white,
                                           fontWeight: FontWeight.w700,
-                                          height: 1,
-                                        ),
-
-                                      ),
-                                      Text(
-                                        '/6 Players',
-                                        style: TextStyle(
-                                          fontFamily: "Poppins",
-                                          fontSize: 16,
-                                          color: Colors.white70,
+                                          letterSpacing: 1.2,
                                         ),
                                       ),
+                                      SizedBox(width: 4,),
+                                      AnimatedDots(),
                                     ],
                                   ),
-                                ],
-                              ),
 
-                              SizedBox(height: 20),
 
-                              // Minimum players indicator
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                ),
-                                child: Text(
-                                  'Minimum 2 players required',
-                                  style: TextStyle(
-                                    fontFamily: "Poppins",
-                                    fontSize: 14,
-                                    color: Colors.white70,
+                                      SizedBox(height: 20,),
+                                  // Player count with circular progress
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 150,
+                                        height: 150,
+                                        child: CircularProgressIndicator(
+
+                                          value: (game.players.length / 6).clamp(0.0, 1.0), // Fixed: Clamped value
+                                          strokeWidth: 10,
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.amber.shade600),
+                                        ),
+                                      ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '${game.players.length}',
+                                            style: TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 45,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1,
+                                            ),
+
+                                          ),
+                                          Text(
+                                            '/6 Players',
+                                            style: TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 16,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                    ],
                                   ),
-                                ),
-                              ),
 
-                              SizedBox(height: 30),
+                                  SizedBox(height: 20),
 
-                              // Players list
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: 200),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: game.players.isEmpty
-                                      ? Center(
+                                  // Minimum players indicator
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                    ),
                                     child: Text(
-                                      'No players yet',
+                                      'Minimum 2 players required',
                                       style: TextStyle(
                                         fontFamily: "Poppins",
+                                        fontSize: 14,
                                         color: Colors.white70,
                                       ),
                                     ),
-                                  )
-                                      : ListView.separated(
-                                    shrinkWrap: true,
-                                    itemCount: game.players.length,
-                                    separatorBuilder: (context, index) => Divider(
-                                      color: Colors.white.withOpacity(0.1),
-                                      height: 16,
-                                    ),
-                                    itemBuilder: (context, index) {
-                                      final player = game.players[index];
-                                      return Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 4),
-                                        child: Row(
-                                          children: [
+                                  ),
 
+                                  SizedBox(height: 30),
 
-                                          Icon(Icons.person_rounded, color: Colors.white, size: 25),
-                                            SizedBox(width:4),
-                                            Text(
-                                              player.name,
-                                              style: TextStyle(
-                                                fontFamily: "Poppins",
-                                                fontSize: 16,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
+                                  // Players list
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(maxHeight: 200),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: game.players.isEmpty
+                                          ? Center(
+                                        child: Text(
+                                          'No players yet',
+                                          style: TextStyle(
+                                            fontFamily: "Poppins",
+                                            color: Colors.white70,
+                                          ),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
+                                      )
+                                          : ListView.separated(
+                                        shrinkWrap: true,
+                                        itemCount: game.players.length,
+                                        separatorBuilder: (context, index) => Divider(
+                                          color: Colors.white.withOpacity(0.1),
+                                          height: 16,
+                                        ),
+                                        itemBuilder: (context, index) {
+                                          final player = game.players[index];
+                                          return Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 4),
+                                            child: Row(
+                                              children: [
 
-                              SizedBox(height: 30),
 
-                              // Action buttons
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: _GameButton(
-                                      onPressed: game.players.length >= 2 ? _handleStartGame : null,
-                                      text: 'START GAME',
-                                      icon: Icons.play_arrow_rounded,
-                                      gradient: LinearGradient(
-                                        colors: [Colors.amber.shade600, Colors.amber.shade800],
+                                              Icon(Icons.person_rounded, color: Colors.white, size: 25),
+                                                SizedBox(width:4),
+                                                Text(
+                                                  player.name,
+                                                  style: TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                       ),
-                                      textColor: Colors.black,
                                     ),
                                   ),
 
-                                  SizedBox(height: 16),
+                                  SizedBox(height: 30),
 
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: _GameButton(
-                                      onPressed: _shareGameInvite,
-                                      text: 'INVITE FRIENDS',
-                                      icon: Icons.share_rounded,
-                                      gradient: LinearGradient(
-                                        colors: [Colors.blue.shade600, Colors.blue.shade800],
+                                  // Action buttons
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: _GameButton(
+                                          onPressed: game.players.length >= 2 ? _handleStartGame : null,
+                                          text: 'START GAME',
+                                          icon: Icons.play_arrow_rounded,
+                                          gradient: LinearGradient(
+                                            colors: [Colors.amber.shade600, Colors.amber.shade800],
+                                          ),
+                                          textColor: Colors.black,
+                                        ),
                                       ),
-                                      textColor: Colors.white,
-                                    ),
+
+                                      SizedBox(height: 16),
+
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: _GameButton(
+                                          onPressed: _shareGameInvite,
+                                          text: 'INVITE FRIENDS',
+                                          icon: Icons.share_rounded,
+                                          gradient: LinearGradient(
+                                            colors: [Colors.blue.shade600, Colors.blue.shade800],
+                                          ),
+                                          textColor: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
+
+                                  if (_voiceChatService != null) ...[
+                                    SizedBox(height: 20),
+                                    GestureDetector(
+                                      onTap: () => _voiceChatService!.toggleMute(),
+                                      child: Container(
+                                        padding: EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: _voiceChatService!.isMuted
+                                              ? Colors.red.withOpacity(0.7)
+                                              : Colors.green.withOpacity(0.7),
+                                        ),
+                                        child: Icon(
+                                          _voiceChatService!.isMuted
+                                              ? CupertinoIcons.mic_slash_fill
+                                              : CupertinoIcons.mic_fill,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
-
-                              if (_voiceChatService != null) ...[
-                                SizedBox(height: 20),
-                                GestureDetector(
-                                  onTap: () => _voiceChatService!.toggleMute(),
-                                  child: Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _voiceChatService!.isMuted
-                                          ? Colors.red.withOpacity(0.7)
-                                          : Colors.green.withOpacity(0.7),
-                                    ),
-                                    child: Icon(
-                                      _voiceChatService!.isMuted
-                                          ? CupertinoIcons.mic_slash_fill
-                                          : CupertinoIcons.mic_fill,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            child: LeaveButton(
+                              onPressed: (){
+                                showCupertinoDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return CupertinoAlertDialog(
+                                      title: const Text("Leave Game"),
+                                      content: const Text("Are you sure you want to Leave the game?"),
+                                      actions: <Widget>[
+                                        CupertinoDialogAction(
+                                          child: const Text(
+                                            "Cancel",
+                                            style: TextStyle(
+                                              color: Colors.blueAccent,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                        ),
+                                        CupertinoDialogAction(
+                                          isDestructiveAction: true,
+                                          child: const Text("Leave"),
+                                          onPressed: () {
+                                            _handleLeaveGame();
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                              tooltip: 'Leave Game',
+
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
