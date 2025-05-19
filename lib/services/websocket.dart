@@ -13,7 +13,7 @@ class WebSocketService with ChangeNotifier {
   void Function(String)? onCardExchangeNotification;
 
   WebSocketService() {
-    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
+    socket = IO.io('http://65.2.83.124:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
