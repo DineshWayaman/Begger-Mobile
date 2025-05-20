@@ -238,10 +238,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Player Name with Edit Icon
 
 
-                    Image.asset(
-                      "assets/images/beggarlogo.png",
-                      width: 300,
-                      height: 300,
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Blurred image for the glow effect
+                        ImageFiltered(
+                          imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // Adjust blur for glow intensity
+                          child: ColorFiltered(
+                            colorFilter: ColorFilter.mode(
+                              Colors.lightBlueAccent, // Glow color and opacity
+                              BlendMode.srcATop,
+                            ),
+                            child: Image.asset(
+                              "assets/images/beggarlogo.png",
+                              width: 310, // Slightly larger to show glow
+                              height: 310,
+                            ),
+                          ),
+                        ),
+                        // Original image
+                        Image.asset(
+                          "assets/images/beggarlogo.png",
+                          width: 300,
+                          height: 300,
+                        ),
+                      ],
                     ),
 
                     // Buttons

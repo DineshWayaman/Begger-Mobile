@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GameSummaryScreen extends StatelessWidget {
   final String summaryMessage;
@@ -34,18 +36,13 @@ class GameSummaryScreen extends StatelessWidget {
   Future<Uint8List?> _captureScreenshot() async {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Wait for the frame to be rendered
         await Future.delayed(const Duration(milliseconds: 200));
-
-        // Verify widget size
         final RenderBox? renderBox = _screenshotKey.currentContext?.findRenderObject() as RenderBox?;
         print('Attempt $attempt: Screenshot size: ${renderBox?.size}');
         if (renderBox == null || renderBox.size.isEmpty) {
           print('Attempt $attempt: Invalid widget size');
           continue;
         }
-
-        // Try primary screenshot method
         final Uint8List? image = await screenshotController.capture();
         if (image != null) {
           print('Attempt $attempt: Screenshot captured successfully');
@@ -56,8 +53,6 @@ class GameSummaryScreen extends StatelessWidget {
         print('Attempt $attempt: Screenshot capture error: $e');
       }
     }
-
-    // Fallback to RenderRepaintBoundary
     print('Falling back to RenderRepaintBoundary capture');
     try {
       final RenderRepaintBoundary? boundary = _screenshotKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -85,13 +80,11 @@ class GameSummaryScreen extends StatelessWidget {
       if (image == null) {
         throw Exception('Failed to capture screenshot');
       }
-
       final result = await ImageGallerySaverPlus.saveImage(
         image,
         quality: 100,
         name: _generateUniqueImageName(),
       );
-
       if (result['isSuccess']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Saved to Gallery!')),
@@ -114,21 +107,16 @@ class GameSummaryScreen extends StatelessWidget {
       if (image == null) {
         throw Exception('Failed to capture screenshot');
       }
-
       final directory = await getTemporaryDirectory();
       final uniqueName = _generateUniqueImageName();
       imagePath = File('${directory.path}/$uniqueName.png');
       await imagePath.writeAsBytes(image);
-
-      // Share both image and text
       final shareText = 'Check out my game summary from the Beggar card game!\n\n$summaryMessage';
       final result = await Share.shareXFiles(
         [XFile(imagePath.path, mimeType: 'image/png')],
         text: shareText,
-        subject: 'Beggar Card Game Summary', // Optional subject for emails
+        subject: 'Beggar Card Game Summary',
       );
-
-      // Check share result
       if (result.status == ShareResultStatus.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Shared successfully!')),
@@ -146,7 +134,6 @@ class GameSummaryScreen extends StatelessWidget {
         SnackBar(content: Text('Failed to share image: $e')),
       );
     } finally {
-      // Clean up temporary file
       if (imagePath != null && await imagePath.exists()) {
         try {
           await imagePath.delete();
@@ -158,8 +145,39 @@ class GameSummaryScreen extends StatelessWidget {
     }
   }
 
+  // Parse summary message and group civilians
+  List<Map<String, dynamic>> _parseSummaryMessage(String message) {
+    final List<Map<String, dynamic>> players = [];
+    final List<String> civilianNames = [];
+    final lines = message.split('\n');
+    for (var line in lines) {
+      final parts = line.split(': ');
+      if (parts.length == 2) {
+        final role = parts[1].trim();
+        final name = parts[0].trim();
+        if (role == 'Civilian') {
+          civilianNames.add(name);
+        } else {
+          players.add({'role': role, 'names': [name]});
+        }
+      }
+    }
+    if (civilianNames.isNotEmpty) {
+      players.add({'role': civilianNames.length > 1 ? 'Civilians' : 'Civilian', 'names': civilianNames});
+    }
+    const roleOrder = ['King', 'Wise', 'Civilian', 'Civilians', 'Beggar'];
+    players.sort((a, b) {
+      final aIndex = roleOrder.indexOf(a['role']);
+      final bIndex = roleOrder.indexOf(b['role']);
+      return aIndex.compareTo(bIndex);
+    });
+    return players;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final players = _parseSummaryMessage(summaryMessage);
+
     return Scaffold(
       backgroundColor: Colors.teal.shade50,
       body: Container(
@@ -173,7 +191,7 @@ class GameSummaryScreen extends StatelessWidget {
           child: Center(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.only(left: 16, right: 16,bottom: 24),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -188,49 +206,140 @@ class GameSummaryScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Screenshot only this part (excluding buttons)
                   Screenshot(
                     controller: screenshotController,
                     child: RepaintBoundary(
                       key: _screenshotKey,
                       child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+
+                        ),
                         constraints: const BoxConstraints(
                           minWidth: 200,
                           minHeight: 100,
                           maxWidth: double.infinity,
                         ),
-                        color: Colors.white, // Ensure solid background
+
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.emoji_events, color: Colors.orangeAccent, size: 50),
-                            const SizedBox(height: 12),
+                            //game logo
+                            Image.asset(
+                              'assets/images/beggarlogo.png',
+                              height: 100,
+                              width: 100,
+                            ),
+
                             const Text(
-                              'Game Summary',
+                              'SUMMARY',
                               style: TextStyle(
                                 fontFamily: "Poppins",
-                                fontSize: 22,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
+                                height: 1
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 16),
-                            // Replaced SingleChildScrollView with fixed-height Text
-                            Container(
-                              constraints: const BoxConstraints(maxHeight: 180),
-                              child: Text(
-                                summaryMessage,
-                                style: const TextStyle(
+                            const SizedBox(height: 10),
+                            // Beautiful list of players
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics:  const NeverScrollableScrollPhysics(),
+                              itemCount: players.length,
+                              separatorBuilder: (context, index) => const Divider(
+                                color: Colors.grey,
+                                thickness: 0.5,
+                                height: 8,
+                              ),
+                              itemBuilder: (context, index) {
+                                final player = players[index];
+                                final role = player['role'] as String;
+                                final names = player['names'] as List<String>;
+                                final roleColor = {
+                                  'King': Colors.amber[700],
+                                  'Wise': Colors.blue[700],
+                                  'Civilian': Colors.grey[600],
+                                  'Civilians': Colors.grey[600],
+                                  'Beggar': Colors.brown[600],
+                                }[role] ?? Colors.black87;
+
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  margin: const EdgeInsets.symmetric(vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        role,
+                                        style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: roleColor,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        child: Text(
+                                          names.join(', '),
+                                          style: const TextStyle(
+                                            fontFamily: "Poppins",
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.black54,
+                                          ),
+                                          textAlign: TextAlign.right,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+
+
+                            const SizedBox(height: 5),
+                            RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                text: 'Developed by ',
+                                style: TextStyle(
                                   fontFamily: "Poppins",
-                                  fontSize: 15,
-                                  color: Colors.black87,
-                                  height: 1.5,
+                                  fontSize: 12,
+                                  color: Colors.black54,
                                 ),
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 8, // Adjust based on your needs
+                                children: [
+                                  TextSpan(
+                                    text: 'Globevik (Pvt) Ltd.',
+                                    style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      fontSize: 12,
+                                      color: Colors.blue,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () async {
+                                        final url = 'https://www.globevik.com';
+                                        if (await canLaunchUrl(Uri.parse(url))) {
+                                          await launchUrl(Uri.parse(url));
+                                        }
+                                      },
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -238,8 +347,7 @@ class GameSummaryScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  // Buttons outside screenshot
+
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
@@ -291,17 +399,17 @@ class _ClassicButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 60, // Reduced width for icon-only buttons
+      width: 60,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          padding: const EdgeInsets.all(12), // Square padding for icon
+          padding: const EdgeInsets.all(12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 4,
-          minimumSize: const Size(48, 48), // Square button
+          minimumSize: const Size(48, 48),
         ),
         child: Icon(icon, size: 24, color: Colors.white),
       ),

@@ -279,11 +279,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 _isRestarted = true;
                 _isReplayInitiator = false;
               });
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    (route) => false,
-              );
+              _voiceChatService?.dispose();
+              _handleLeaveGame();
             },
             onReplayPressed: () {
 
