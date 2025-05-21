@@ -280,7 +280,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 _isReplayInitiator = false;
               });
               _voiceChatService?.dispose();
-              _handleLeaveGame();
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
             onReplayPressed: () {
 

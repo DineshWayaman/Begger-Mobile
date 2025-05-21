@@ -76,6 +76,11 @@ class WebSocketService with ChangeNotifier {
       error = data.toString();
       notifyListeners();
     });
+    // Home leave update: Listen for player leaving via summary screen
+    socket.on('playerLeft', (data) {
+      debugPrint('Received playerLeft: $data');
+      notifyListeners();
+    });
   }
 
   void connect() {
@@ -123,6 +128,15 @@ class WebSocketService with ChangeNotifier {
   void leaveGame(String gameId, String playerId) {
     debugPrint('Leaving game: $gameId, player: $playerId');
     socket.emit('leaveGame', {
+      'gameId': gameId,
+      'playerId': playerId,
+    });
+  }
+
+  // Home leave update: New method for leaving from summary screen
+  void leaveGameFromSummary(String gameId, String playerId) {
+    debugPrint('Leaving game from summary: $gameId, player: $playerId');
+    socket.emit('leaveGameFromSummary', {
       'gameId': gameId,
       'playerId': playerId,
     });
