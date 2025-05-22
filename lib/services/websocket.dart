@@ -11,6 +11,7 @@ class WebSocketService with ChangeNotifier {
   void Function()? onDismissDialog;
   void Function(Map<String, dynamic>)? onSelectKingCard;
   void Function(String)? onCardExchangeNotification;
+  void Function(String, int)? onTurnTimerStart; // Pass Timer: Callback for turn timer
 
   WebSocketService() {
     socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
@@ -79,6 +80,14 @@ class WebSocketService with ChangeNotifier {
     // Home leave update: Listen for player leaving via summary screen
     socket.on('playerLeft', (data) {
       debugPrint('Received playerLeft: $data');
+      notifyListeners();
+    });
+    // Pass Timer: Listen for turn timer start
+    socket.on('turnTimerStart', (data) {
+      debugPrint('Received turnTimerStart: $data');
+      if (onTurnTimerStart != null) {
+        onTurnTimerStart!(data['playerId'], data['duration']);
+      }
       notifyListeners();
     });
   }

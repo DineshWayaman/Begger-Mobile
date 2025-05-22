@@ -446,34 +446,18 @@ class _GameSummaryScreenState extends State<GameSummaryScreen> {
 
 
                               const SizedBox(height: 5),
-                              RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  text: 'Developed by ',
-                                  style: TextStyle(
-                                    fontFamily: "Poppins",
-                                    fontSize: 12,
-                                    color: Colors.black54,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'Globevik (Pvt) Ltd.',
-                                      style: TextStyle(
-                                        fontFamily: "Poppins",
-                                        fontSize: 12,
-                                        color: Colors.blue,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () async {
-                                          final url = 'https://www.globevik.com';
-                                          if (await canLaunchUrl(Uri.parse(url))) {
-                                            await launchUrl(Uri.parse(url));
-                                          }
-                                        },
-                                    ),
-                                  ],
+                              // All rights reserved Beggar
+                              const Text(
+                                'All rights reserved Beggar Online',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black54,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
+
                             ],
                           ),
                         ),
