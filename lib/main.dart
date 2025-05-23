@@ -18,8 +18,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WebSocketService()..connect()),
       ],
       child: MaterialApp(
-        title: 'Card Game',
-        theme: ThemeData(primarySwatch: Colors.blue),
+        debugShowCheckedModeBanner: false,
+        title: 'Beggar Online',
+        theme: ThemeData(primaryColor: Colors.blue,textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Colors.blue,
+          selectionColor: Colors.lightBlueAccent,
+          selectionHandleColor: Colors.blue,
+        ),
+        ),
         home: const HomeScreen(),
       ),
     );

@@ -49,6 +49,9 @@ dependencies:
   image_gallery_saver_plus: ^4.0.1
   url_launcher: ^6.3.1
   flutter_animate: ^4.5.2
+  universal_html: ^2.2.4
+  connectivity_plus: ^6.1.1
+  internet_connection_checker: ^3.0.1
 
 
 dev_dependencies:

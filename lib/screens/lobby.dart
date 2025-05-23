@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,6 +51,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final websocket = Provider.of<WebSocketService>(context, listen: false);
+    final screenSize = MediaQuery.of(context).size;
+    final isLargeScreen = screenSize.width > 600; // Threshold for web vs mobile
+
+    // Constrain card width for large screens
+    final cardWidth = isLargeScreen ? 500.0 : screenSize.width * 0.9;
 
     return Scaffold(
       body: Container(
@@ -62,127 +68,135 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 16 : 24,
+                vertical: isLargeScreen ? 32 : 16,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: cardWidth,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              color: Colors.blue.shade900,
-                              size: 40,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Beggar',
-                            style: TextStyle(
-                              fontFamily: "Poppins",
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade900,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      CustomTextField(
-                        controller: _playerNameController,
-                        hint: 'Your Name',
-                        isReadOnly: true,
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _gameIdController,
-                        hint: 'Game ID',
-                        isReadOnly: false,
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.copy, color: Colors.blue.shade900),
-                          onPressed: _copyGameId,
-                        ),
-                      ),
-                      Text(
-                        "Copy this Game ID and share it with your friends or Paste your friend's Game ID",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      GestureDetector(
-                        onTap: () {
-                          final name = _playerNameController.text.trim().isEmpty
-                              ? 'Player'
-                              : _playerNameController.text.trim();
-                          final gameId = _gameIdController.text.trim();
-                          if (name.length > 20) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Name must be 20 characters or less',
-                                  style: TextStyle(
-                                    fontFamily: "Poppins",
-                                  ),
-                                ),
-                                backgroundColor: Colors.red.shade400,
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.blue.shade900,
+                                size: isLargeScreen ? 48 : 40,
                               ),
-                            );
-                            return;
-                          }
-                          final playerId = '$gameId-$name';
-                          // Reset WebSocketService state before joining
-                          websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
-                          websocket.requestGameState(gameId);
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => GameScreen(gameId: gameId, playerId: playerId),
                             ),
-                          );
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.blue.shade600, Colors.blue.shade900],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.shade200.withOpacity(0.5),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          width: double.infinity,
-                          child: Center(
-                            child: Text(
-                              'Join/Create Game',
+                            const SizedBox(width: 8),
+                            Text(
+                              'Beggar',
                               style: TextStyle(
                                 fontFamily: "Poppins",
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                                fontSize: isLargeScreen ? 56 : 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isLargeScreen ? 32 : 24),
+                        CustomTextField(
+                          controller: _playerNameController,
+                          hint: 'Your Name',
+                          isReadOnly: true,
+                        ),
+                        SizedBox(height: isLargeScreen ? 24 : 16),
+                        CustomTextField(
+                          controller: _gameIdController,
+                          hint: 'Game ID',
+                          isReadOnly: false,
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.copy, color: Colors.blue.shade900),
+                            onPressed: _copyGameId,
+                          ),
+                        ),
+                        Text(
+                          "Copy this Game ID and share it with your friends or Paste your friend's Game ID",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: isLargeScreen ? 16 : 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        SizedBox(height: isLargeScreen ? 32 : 24),
+                        GestureDetector(
+                          onTap: () {
+                            final name = _playerNameController.text.trim().isEmpty
+                                ? 'Player'
+                                : _playerNameController.text.trim();
+                            final gameId = _gameIdController.text.trim();
+                            if (name.length > 20) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Name must be 20 characters or less',
+                                    style: TextStyle(
+                                      fontFamily: "Poppins",
+                                    ),
+                                  ),
+                                  backgroundColor: Colors.red.shade400,
+                                ),
+                              );
+                              return;
+                            }
+                            final playerId = '$gameId-$name';
+                            // Reset WebSocketService state before joining
+                            websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
+                            websocket.requestGameState(gameId);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => GameScreen(gameId: gameId, playerId: playerId),
+                              ),
+                            );
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.blue.shade600, Colors.blue.shade900],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.shade200.withOpacity(0.5),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: isLargeScreen ? 20 : 16),
+                            width: double.infinity,
+                            child: Center(
+                              child: Text(
+                                'Join/Create Game',
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  fontSize: isLargeScreen ? 20 : 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
