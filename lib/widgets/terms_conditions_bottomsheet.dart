@@ -88,7 +88,7 @@ void showTermsAndConditionsBottomSheet(BuildContext context) {
 
                         _buildSectionTitle('8. Contact Us', Icons.email_outlined),
                         _buildParagraph(
-                            'If you have any questions about these Terms, contact us at support@globevik.com.'),
+                            'If you have any questions about these Terms, contact us at support@playbeggar.online.'),
                       ],
                     ),
                   ),

@@ -80,7 +80,7 @@ void showAboutGameBottomSheet(BuildContext context) {
                         _buildSubSection('1. Singles'),
                         _buildBulletPoint('Play any single card. Others must play a higher value single.'),
                         _buildSubSection('2. Consecutive'),
-                        _buildBulletPoint('2–13 consecutive cards (e.g., 3, 4, 5, 6). Suits must match.'),
+                        _buildBulletPoint('2–A consecutive cards (e.g., 3, 4, 5, 6,..., J, Q, K, A). Suits must match.'),
                         _buildBulletPoint('Others must play a longer or higher sequence.'),
                         _buildSubSection('3. Groups'),
                         _buildBulletPoint('2–4 cards of same value and suit (e.g., three Jacks of clubs).'),
@@ -91,26 +91,18 @@ void showAboutGameBottomSheet(BuildContext context) {
                         _buildBulletPoint('Deal cards clockwise.'),
                         _buildBulletPoint('First player plays any pattern. Others may:'),
                         _buildSubBulletPoint('Pass: Skip turn.'),
-                        _buildSubBulletPoint('Play higher pattern of same type.'),
-                        _buildSubBulletPoint(
-                            'Take the Chance: Play unbeatable pattern. If beaten, next player takes chance.'),
-                        _buildBulletPoint('Player who wins chance starts new pattern.'),
+                        _buildSubBulletPoint('Play same pattern with higher value.'),
 
                         _buildSectionTitle('Titles', Icons.emoji_events),
                         _buildSubSection('King (1st to finish)'),
-                        _buildBulletPoint('Takes Beggar’s highest card (excluding Joker/Detail).'),
-                        _buildBulletPoint('Gives any unwanted card to Beggar.'),
                         _buildSubSection('Wise (2nd to finish)'),
                         _buildBulletPoint('Starts the next round.'),
                         _buildSubSection('Beggar (Last to finish)'),
-                        _buildBulletPoint('Gives highest-value card to King.'),
-                        _buildBulletPoint('Accepts King’s unwanted card.'),
-                        _buildBulletPoint('Deals cards next round.'),
                         _buildSubSection('Civilians'),
-                        _buildBulletPoint('Finishers between Wise and Beggar, no title.'),
+                        _buildBulletPoint('Finishers between Wise and Beggar'),
                         Center(
                           child: Text(
-                            '©2025 Beggar Game by Globevik',
+                            '©2025 Beggar Online. All rights reserved.',
                             style: TextStyle(
                               fontFamily: "Poppins",
                               color: Colors.black,

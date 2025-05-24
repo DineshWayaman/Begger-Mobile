@@ -1,16 +1,22 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/widgets/about_game_bottomsheet.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/animated_button.dart';
 import '../widgets/terms_conditions_bottomsheet.dart';
 import 'lobby.dart';
+import 'package:universal_html/html.dart' as html;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,12 +28,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _nameController = TextEditingController();
   String _playerName = 'Player'; // Default name
+  late StreamSubscription<List<ConnectivityResult>>
+  subscription; // Update the type here
+  var isDeviceConnected = false;
+  bool isAlertSet = false;
 
   @override
   void initState() {
     super.initState();
     _loadName();
     _checkAndPromptForName();
+    listenToConnectionChanges();
+    // disableRightClick();
   }
 
   Future<void> _loadName() async {
@@ -171,6 +183,136 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  void _shareInviteWithImage() async {
+    try {
+      // Share message
+      final String message =
+          "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.beggar.cardgame\nor Play online \nhttps://playbeggar.online";
+
+      if (kIsWeb) {
+        // Web-specific sharing (text only)
+        await Share.share(
+          message,
+          subject: "Check out this game!",
+        );
+      } else {
+        // Mobile-specific sharing (text and image)
+        final ByteData bytes = await rootBundle.load('assets/images/invite_card.png');
+        final Uint8List imageBytes = bytes.buffer.asUint8List();
+
+        final tempDir = await getTemporaryDirectory();
+        final file = await File('${tempDir.path}/beggar_invite.png').writeAsBytes(imageBytes);
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: message,
+          subject: "Check out this game!",
+        );
+      }
+    } catch (e) {
+      print("Error sharing: $e");
+      // Handle the error (e.g., show a snackbar to the user)
+    }
+  }
+
+  void listenToConnectionChanges() {
+    subscription = Connectivity().onConnectivityChanged.listen(
+          (List<ConnectivityResult> results) async {
+        // Updated to handle List<ConnectivityResult>
+        // Handle the first result (you can also handle other results if needed)
+        isDeviceConnected =
+        await InternetConnectionChecker.createInstance().hasConnection;
+        if (!isDeviceConnected && !isAlertSet) {
+          showCupertinoDialogBox();
+          setState(() => isAlertSet = true);
+        }
+      },
+    );
+  }
+
+
+
+  void showCupertinoDialogBox() {
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return PopScope(
+          canPop: false,
+          child: CupertinoAlertDialog(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/internet.png',
+                  height: 100,
+                ),
+                const Text(
+                  'Oops!',
+                  style: TextStyle(
+                    color: CupertinoColors.systemRed,
+                    fontSize: 25,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'No Internet Connection',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            content: const Text(
+              'Please check your internet connection and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    color: CupertinoColors.activeBlue,
+                    fontSize: 18,
+                  ),
+                ),
+                onPressed: () async {
+                  Navigator.pop(context, 'Cancel');
+                  setState(() => isAlertSet = false);
+
+                  // Check if the widget is still mounted before calling setState
+                  if (!mounted) return;
+
+                  bool isDeviceConnected =
+                  await InternetConnectionChecker.createInstance()
+                      .hasConnection;
+
+                  if (!isDeviceConnected && !isAlertSet) {
+                    showCupertinoDialogBox();
+                    setState(() => isAlertSet = true);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  //disable right click
+  // void disableRightClick() {
+  //   if (kIsWeb) {
+  //     html.document.addEventListener('contextmenu', (event) {
+  //       event.preventDefault();
+  //     });
+  //   }
+  // }
+
 
 
   @override
@@ -214,6 +356,44 @@ class _HomeScreenState extends State<HomeScreen> {
         return false;
       },
       child: Scaffold(
+      extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: true,
+        //Appbar with Welcome and editable Name
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          title: SizedBox(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Welcome $_playerName",
+                  style: TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+
+                  ),
+                ),
+                const SizedBox(width: 4),
+                AnimateIcon(
+                  onTap:() => _showNameDialog(initialName: _playerName),
+                  iconType: IconType.continueAnimation,
+                  animateIcon: AnimateIcons.edit,
+                  width: 25,
+                  height: 25,
+                  toolTip: "Edit Name",
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+
+        ),
+
         body: Stack(
           children: [
             // Background
@@ -297,14 +477,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         AnimatedMenuButton(
                           label: 'Invite Friends',
-                          onTap: () {
-                            final String message =
-                                "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.beggar.cardgame";
-                            Share.share(
-                              message,
-                              subject: "Check out this game!",
-                            );
-                          },
+                          onTap: (){
+                            _shareInviteWithImage();
+                          }
                         ),
 
                         AnimatedMenuButton(
@@ -356,21 +531,22 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Footer
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
+            SafeArea(
+              minimum: const EdgeInsets.only(bottom: 16),
+              child: Align(
+                alignment: Alignment.bottomCenter,
                 child: Text(
                   '©2025 Beggar Game. All rights reserved.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: "Poppins",
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 15,
+                    fontFamily: 'Poppins',
+                    fontSize: MediaQuery.of(context).size.width < 360 ? 13 : 15,
                     fontWeight: FontWeight.w500,
-                    shadows: [
-                      const Shadow(
-                        color: Colors.black,
-                        blurRadius: 8,
+                    color: Colors.white.withOpacity(0.9),
+                    shadows: const [
+                      Shadow(
+                        color: Colors.black54,
+                        blurRadius: 6,
                         offset: Offset(0, 2),
                       ),
                     ],
@@ -378,46 +554,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 40,
-              left: 0,
-              right: 0,
-              child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
 
-                const SizedBox(width: 4),
-                Text(
-                  "Welcome $_playerName",
-                  style:TextStyle(
-                    fontFamily: "Poppins",
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    shadows: [
-                      const Shadow(
-                        color: Colors.black,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () => _showNameDialog(initialName: _playerName),
-                  child: AnimatedEmoji(
-                    AnimatedEmojis.writingHand,
-                    size: 25,
-
-
-                  ),
-                ),
-
-              ],
-            ),)
           ],
         ),
+
       ),
     );
   }
@@ -425,6 +565,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    subscription.cancel();
     super.dispose();
   }
 }

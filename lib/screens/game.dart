@@ -165,6 +165,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _hasShownNewRoundMessage = false;
     _shownMessages.clear();
     _timerController?.stop(); // Pass Timer: Stop timer on leave
+    _voiceChatService?.dispose();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -914,7 +915,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   SafeArea(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final isWeb = constraints.maxWidth > 600;
+                        final isWeb = constraints.maxWidth > 1070;
                         return isWeb
                             ? Center(
                           child: ConstrainedBox(
@@ -1525,7 +1526,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                               onPressed: game
                                                                           .players
                                                                           .length >=
-                                                                      2
+                                                                      3
                                                                   ? _handleStartGame
                                                                   : null,
                                                               text:
@@ -1581,7 +1582,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                               onPressed: game
                                                                           .players
                                                                           .length >=
-                                                                      2
+                                                                      3
                                                                   ? _handleStartGame
                                                                   : null,
                                                               text:
@@ -1837,7 +1838,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   children: [
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final isWeb = constraints.maxWidth > 600;
+                        final isWeb = constraints.maxWidth > 850;
                         return isWeb
                             ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -2110,12 +2111,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                             : card.isDetails
                                                                 ? 'Details Card'
                                                                 : '${card.rank} of ${card.suit}',
-                                                        child: SizedBox(
-                                                          width:207,
-                                                          height:322,
-                                                          child: CardWidget(
-                                                              card: card,),
-                                                        )
+                                                        child: CardWidget(
+                                                            card: card,)
                                                       );
                                                     },
                                                   )
@@ -2191,7 +2188,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                           0 &&
                                                       player.hand
                                                           .isNotEmpty)
-                                                      ? 'Cannot pass as new round starter'
+                                                      ? 'Cannot Pass'
                                                       : '',
                                                 ),
                                               ),
@@ -2305,8 +2302,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                     crossAxisSpacing:
                                                                         4,
                                                                     childAspectRatio:
-                                                                        2.1 /
-                                                                            3.08,
+                                                                       1.20 /
+                                                                            1.75,
                                                                   ),
                                                                   itemBuilder:
                                                                       (context,
@@ -2400,6 +2397,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                               child: CardWidget(
                                                                                 card: card,
                                                                                 isSelected: selectedCards.contains(card),
+                                                                                cardHeight: double.infinity,
+                                                                                cardWidth: double.infinity,
                                                                                 onTap: isMyTurn
                                                                                     ? () {
                                                                                         setState(() {
@@ -2901,6 +2900,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                             card,
                                                                         isSelected:
                                                                             selectedCards.contains(card),
+                                                                        cardWidth: double.infinity,
+                                                                        cardHeight: double.infinity,
                                                                         onTap: isMyTurn
                                                                             ? () {
                                                                                 setState(() {
@@ -3038,67 +3039,70 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      Expanded(
-                                        child: AnimatedScaleButton(
-                                          onPressed:
-                                              canPass ? _handlePass : null,
-                                          child: const Text(
-                                            'Pass',
-                                            style: TextStyle(
-                                              fontFamily: "Poppins",
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal:8.0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        Expanded(
+                                          child: AnimatedScaleButton(
+                                            onPressed:
+                                                canPass ? _handlePass : null,
+                                            child: const Text(
+                                              'Pass',
+                                              style: TextStyle(
+                                                fontFamily: "Poppins",
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            tooltip: game.isTestMode
+                                                ? 'Passing not allowed in test mode'
+                                                : (game.pile.isEmpty &&
+                                                        game.passCount == 0 &&
+                                                        player.hand.isNotEmpty)
+                                                    ? 'Cannot pass as new round starter'
+                                                    : '',
+                                          ),
+                                        ),
+                                        SizedBox(width:4),
+                                        if (_voiceChatService != null)
+                                          AnimatedScaleButton(
+                                            onPressed: () =>
+                                                _voiceChatService!.toggleMute(),
+                                            child: Icon(
+                                              _voiceChatService!.isMuted
+                                                  ? CupertinoIcons.mic_slash_fill
+                                                  : CupertinoIcons.mic_fill,
                                               color: Colors.white,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 16,
+                                              size: 22,
+                                            ),
+                                            tooltip: _voiceChatService!.isMuted
+                                                ? 'Unmute'
+                                                : 'Mute',
+                                          ),
+                                        SizedBox(width:4),
+                                        Expanded(
+                                          child: AnimatedScaleButton(
+                                            onPressed: isMyTurn &&
+                                                    selectedCards.isNotEmpty
+                                                ? () => _playCards(selectedCards)
+                                                : null,
+                                            child: const Text(
+                                              'Play',
+                                              style: TextStyle(
+                                                fontFamily: "Poppins",
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 16,
+                                              ),
                                             ),
                                           ),
-                                          tooltip: game.isTestMode
-                                              ? 'Passing not allowed in test mode'
-                                              : (game.pile.isEmpty &&
-                                                      game.passCount == 0 &&
-                                                      player.hand.isNotEmpty)
-                                                  ? 'Cannot pass as new round starter'
-                                                  : '',
                                         ),
-                                      ),
-                                      SizedBox(width:4),
-                                      if (_voiceChatService != null)
-                                        AnimatedScaleButton(
-                                          onPressed: () =>
-                                              _voiceChatService!.toggleMute(),
-                                          child: Icon(
-                                            _voiceChatService!.isMuted
-                                                ? CupertinoIcons.mic_slash_fill
-                                                : CupertinoIcons.mic_fill,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                          tooltip: _voiceChatService!.isMuted
-                                              ? 'Unmute'
-                                              : 'Mute',
-                                        ),
-                                      SizedBox(width:4),
-                                      Expanded(
-                                        child: AnimatedScaleButton(
-                                          onPressed: isMyTurn &&
-                                                  selectedCards.isNotEmpty
-                                              ? () => _playCards(selectedCards)
-                                              : null,
-                                          child: const Text(
-                                            'Play',
-                                            style: TextStyle(
-                                              fontFamily: "Poppins",
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                 ],

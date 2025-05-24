@@ -6,11 +6,15 @@ class CardWidget extends StatelessWidget {
   final Cards? card;
   final VoidCallback? onTap;
   final bool isSelected;
+  final double? cardWidth;
+  final double? cardHeight;
 
   const CardWidget({super.key,
     required this.card,
     this.onTap,
     this.isSelected = false,
+    this.cardWidth,
+    this.cardHeight,
   });
 
   @override
@@ -21,8 +25,6 @@ class CardWidget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 100,
-        height: 160,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           border: Border.all(
@@ -45,11 +47,14 @@ class CardWidget extends StatelessWidget {
               Image.asset(
                 card!.getAssetPath(),
                 fit: BoxFit.cover,
+                width: cardWidth,
+                height: cardHeight,
                 errorBuilder: (context, error, stackTrace) {
                   // Null Check Fix: Handle asset errors
                   print('CardWidget: Image error for ${card!.getAssetPath()}: $error');
                   return const Center(child: Text('X', style: TextStyle(color: Colors.red)));
                 },
+
               ),
               if (isSelected)
                 Container(
@@ -61,6 +66,7 @@ class CardWidget extends StatelessWidget {
             ],
           ),
         ),
+
       ),
     );
   }
