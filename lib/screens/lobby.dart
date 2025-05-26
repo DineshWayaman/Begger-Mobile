@@ -154,7 +154,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               );
                               return;
                             }
-                            final playerId = '$gameId-$name';
+                            final playerId = '${gameId}-${name.replaceAll(' ', '_')}-${Random().nextInt(10000)}';
                             // Reset WebSocketService state before joining
                             websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
                             websocket.requestGameState(gameId);
@@ -210,7 +210,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void dispose() {
     _gameIdController.dispose();
-    _playerNameController.dispose();
     super.dispose();
   }
 }

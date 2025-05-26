@@ -15,6 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/game.dart';
 import '../models/card.dart';
+import '../services/voice_chat_audio_renderers.dart';
 import '../services/websocket.dart';
 import '../services/voice_chat_service.dart';
 import '../widgets/card_widget.dart';
@@ -918,362 +919,520 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         final isWeb = constraints.maxWidth > 1070;
                         return isWeb
                             ? Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              maxWidth: 1200, // Maximum width for larger screens
-                              minWidth: 300, // Minimum width for smaller screens
-                            ),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.8), // Optional: Background for contrast
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth:
+                                        1200, // Maximum width for larger screens
+                                    minWidth:
+                                        300, // Minimum width for smaller screens
                                   ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      // Left side: Player count, Minimum players, Game ID
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16.0),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const SizedBox(height: 20),
-                                              // Header with leave button
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Text(
-                                                    'Waiting Room',
-                                                    style: TextStyle(
-                                                      fontFamily: "Poppins",
-                                                      fontSize: 28,
-                                                      color: Colors.white,
-                                                      fontWeight: FontWeight.w700,
-                                                      letterSpacing: 1.2,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  AnimatedDots(),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 20),
-                                              // Player count with circular progress
-                                              Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  SizedBox(
-                                                    width: 150,
-                                                    height: 150,
-                                                    child: CircularProgressIndicator(
-                                                      value: (game.players.length / 6).clamp(0.0, 1.0),
-                                                      strokeWidth: 10,
-                                                      backgroundColor: Colors.white.withOpacity(0.2),
-                                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                                          Colors.amber.shade600),
-                                                    ),
-                                                  ),
-                                                  Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Text(
-                                                        '${game.players.length}',
-                                                        style: const TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          fontSize: 45,
-                                                          color: Colors.white,
-                                                          fontWeight: FontWeight.w700,
-                                                          height: 1,
-                                                        ),
-                                                      ),
-                                                      const Text(
-                                                        '/6 Players',
-                                                        style: TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          fontSize: 16,
-                                                          color: Colors.white70,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 20),
-                                              // Minimum players indicator
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 16, vertical: 8),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.3),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                      color: Colors.white.withOpacity(0.1)),
-                                                ),
-                                                child: const Text(
-                                                  'Minimum 3 players required',
-                                                  style: TextStyle(
-                                                    fontFamily: "Poppins",
-                                                    fontSize: 14,
-                                                    color: Colors.white70,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 10),
-                                              // Game ID and Copy Game ID
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Game ID: ${widget.gameId}',
-                                                    style: const TextStyle(
-                                                      fontFamily: "Poppins",
-                                                      fontSize: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      Clipboard.setData(
-                                                          ClipboardData(text: widget.gameId));
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        SnackBar(
-                                                          content: const Text(
-                                                            'Game ID copied to clipboard',
-                                                            style: TextStyle(fontFamily: "Poppins"),
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 24),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(
+                                          0.8), // Optional: Background for contrast
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            // Left side: Player count, Minimum players, Game ID
+                                            Expanded(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16.0),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const SizedBox(height: 20),
+                                                    // Header with leave button
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        const Text(
+                                                          'Waiting Room',
+                                                          style: TextStyle(
+                                                            fontFamily:
+                                                                "Poppins",
+                                                            fontSize: 28,
+                                                            color: Colors.white,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            letterSpacing: 1.2,
                                                           ),
-                                                          backgroundColor: Colors.green,
                                                         ),
-                                                      );
-                                                    },
-                                                    child: const Icon(Icons.copy,
-                                                        color: Colors.white, size: 20),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 20),
-                                              // Rectangular Leave Button
-                                              GestureDetector(
-                                                onTap: () {
-                                                  showCupertinoDialog(
-                                                    context: context,
-                                                    builder: (BuildContext context) {
-                                                      return CupertinoAlertDialog(
-                                                        title: const Text("Leave Game"),
-                                                        content: const Text(
-                                                            "Are you sure you want to leave the game?"),
-                                                        actions: <Widget>[
-                                                          CupertinoDialogAction(
-                                                            child: const Text(
-                                                              "Cancel",
-                                                              style: TextStyle(
-                                                                color: Colors.blueAccent,
+                                                        const SizedBox(
+                                                            width: 4),
+                                                        AnimatedDots(),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                    // Player count with circular progress
+                                                    Stack(
+                                                      alignment:
+                                                          Alignment.center,
+                                                      children: [
+                                                        SizedBox(
+                                                          width: 150,
+                                                          height: 150,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                            value: (game.players
+                                                                        .length /
+                                                                    6)
+                                                                .clamp(
+                                                                    0.0, 1.0),
+                                                            strokeWidth: 10,
+                                                            backgroundColor:
+                                                                Colors.white
+                                                                    .withOpacity(
+                                                                        0.2),
+                                                            valueColor:
+                                                                AlwaysStoppedAnimation<
+                                                                        Color>(
+                                                                    Colors.amber
+                                                                        .shade600),
+                                                          ),
+                                                        ),
+                                                        Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Text(
+                                                              '${game.players.length}',
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontFamily:
+                                                                    "Poppins",
+                                                                fontSize: 45,
+                                                                color: Colors
+                                                                    .white,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                height: 1,
                                                               ),
                                                             ),
-                                                            onPressed: () {
-                                                              Navigator.of(context).pop();
-                                                            },
-                                                          ),
-                                                          CupertinoDialogAction(
-                                                            isDestructiveAction: true,
-                                                            child: const Text("Leave"),
-                                                            onPressed: () {
-                                                              _handleLeaveGame();
-                                                            },
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  );
-                                                },
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                      vertical: 12, horizontal: 24),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.redAccent,
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.exit_to_app,
-                                                        color: Colors.white,
-                                                        size: 20,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      const Text(
-                                                        'Leave Game',
-                                                        style: TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          fontSize: 16,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 20),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-
-                                      // Right side: Players list, Action buttons, Voice chat
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16.0),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const SizedBox(height: 50),
-                                              // Players list
-                                              ConstrainedBox(
-                                                constraints: const BoxConstraints(maxHeight: 200),
-                                                child: Container(
-                                                  width: double.infinity,
-                                                  padding: const EdgeInsets.all(16),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black.withOpacity(0.3),
-                                                    borderRadius: BorderRadius.circular(16),
-                                                  ),
-                                                  child: game.players.isEmpty
-                                                      ? const Center(
-                                                    child: Text(
-                                                      'No players yet',
-                                                      style: TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        color: Colors.white70,
-                                                      ),
-                                                    ),
-                                                  )
-                                                      : ListView.separated(
-                                                    shrinkWrap: true,
-                                                    itemCount: game.players.length,
-                                                    separatorBuilder: (context, index) =>
-                                                        Divider(
-                                                          color: Colors.white.withOpacity(0.1),
-                                                          height: 16,
-                                                        ),
-                                                    itemBuilder: (context, index) {
-                                                      final player = game.players[index];
-                                                      return Padding(
-                                                        padding: const EdgeInsets.symmetric(
-                                                            vertical: 4),
-                                                        child: Row(
-                                                          children: [
-                                                            const Icon(
-                                                              Icons.person_rounded,
-                                                              color: Colors.white,
-                                                              size: 25,
-                                                            ),
-                                                            const SizedBox(width: 4),
-                                                            Text(
-                                                              player.name,
-                                                              style: const TextStyle(
-                                                                fontFamily: "Poppins",
+                                                            const Text(
+                                                              '/6 Players',
+                                                              style: TextStyle(
+                                                                fontFamily:
+                                                                    "Poppins",
                                                                 fontSize: 16,
-                                                                color: Colors.white,
-                                                                fontWeight: FontWeight.w500,
+                                                                color: Colors
+                                                                    .white70,
                                                               ),
                                                             ),
                                                           ],
                                                         ),
-                                                      );
-                                                    },
-                                                  ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                    // Minimum players indicator
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 8),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withOpacity(0.3),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                        border: Border.all(
+                                                            color: Colors.white
+                                                                .withOpacity(
+                                                                    0.1)),
+                                                      ),
+                                                      child: const Text(
+                                                        'Minimum 3 players required',
+                                                        style: TextStyle(
+                                                          fontFamily: "Poppins",
+                                                          fontSize: 14,
+                                                          color: Colors.white70,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 10),
+                                                    // Game ID and Copy Game ID
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Text(
+                                                          'Game ID: ${widget.gameId}',
+                                                          style:
+                                                              const TextStyle(
+                                                            fontFamily:
+                                                                "Poppins",
+                                                            fontSize: 16,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Clipboard.setData(
+                                                                ClipboardData(
+                                                                    text: widget
+                                                                        .gameId));
+                                                            ScaffoldMessenger
+                                                                    .of(context)
+                                                                .showSnackBar(
+                                                              SnackBar(
+                                                                content:
+                                                                    const Text(
+                                                                  'Game ID copied to clipboard',
+                                                                  style: TextStyle(
+                                                                      fontFamily:
+                                                                          "Poppins"),
+                                                                ),
+                                                                backgroundColor:
+                                                                    Colors
+                                                                        .green,
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: const Icon(
+                                                              Icons.copy,
+                                                              color:
+                                                                  Colors.white,
+                                                              size: 20),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                    // Rectangular Leave Button
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        showCupertinoDialog(
+                                                          context: context,
+                                                          builder: (BuildContext
+                                                              context) {
+                                                            return CupertinoAlertDialog(
+                                                              title: const Text(
+                                                                  "Leave Game"),
+                                                              content: const Text(
+                                                                  "Are you sure you want to leave the game?"),
+                                                              actions: <Widget>[
+                                                                CupertinoDialogAction(
+                                                                  child:
+                                                                      const Text(
+                                                                    "Cancel",
+                                                                    style:
+                                                                        TextStyle(
+                                                                      color: Colors
+                                                                          .blueAccent,
+                                                                    ),
+                                                                  ),
+                                                                  onPressed:
+                                                                      () {
+                                                                    Navigator.of(
+                                                                            context)
+                                                                        .pop();
+                                                                  },
+                                                                ),
+                                                                CupertinoDialogAction(
+                                                                  isDestructiveAction:
+                                                                      true,
+                                                                  child: const Text(
+                                                                      "Leave"),
+                                                                  onPressed:
+                                                                      () {
+                                                                    _handleLeaveGame();
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            );
+                                                          },
+                                                        );
+                                                      },
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 12,
+                                                                horizontal: 24),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color:
+                                                              Colors.redAccent,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(12),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.exit_to_app,
+                                                              color:
+                                                                  Colors.white,
+                                                              size: 20,
+                                                            ),
+                                                            const SizedBox(
+                                                                width: 8),
+                                                            const Text(
+                                                              'Leave Game',
+                                                              style: TextStyle(
+                                                                fontFamily:
+                                                                    "Poppins",
+                                                                fontSize: 16,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(height: 30),
-                                              // Action buttons
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  Expanded(
-                                                    child: _GameButton(
-                                                      onPressed: game.players.length >= 3
-                                                          ? _handleStartGame
-                                                          : null,
-                                                      text: 'START GAME',
-                                                      icon: Icons.play_arrow_rounded,
-                                                      gradient: LinearGradient(
-                                                        colors: [
-                                                          Colors.amber.shade600,
-                                                          Colors.amber.shade800
-                                                        ],
+                                            ),
+
+                                            // Right side: Players list, Action buttons, Voice chat
+                                            Expanded(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16.0),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const SizedBox(height: 50),
+                                                    // Players list
+                                                    ConstrainedBox(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                              maxHeight: 200),
+                                                      child: Container(
+                                                        width: double.infinity,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(16),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.black
+                                                              .withOpacity(0.3),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(16),
+                                                        ),
+                                                        child:
+                                                            game.players.isEmpty
+                                                                ? const Center(
+                                                                    child: Text(
+                                                                      'No players yet',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontFamily:
+                                                                            "Poppins",
+                                                                        color: Colors
+                                                                            .white70,
+                                                                      ),
+                                                                    ),
+                                                                  )
+                                                                : ListView
+                                                                    .separated(
+                                                                    shrinkWrap:
+                                                                        true,
+                                                                    itemCount: game
+                                                                        .players
+                                                                        .length,
+                                                                    separatorBuilder:
+                                                                        (context,
+                                                                                index) =>
+                                                                            Divider(
+                                                                      color: Colors
+                                                                          .white
+                                                                          .withOpacity(
+                                                                              0.1),
+                                                                      height:
+                                                                          16,
+                                                                    ),
+                                                                    itemBuilder:
+                                                                        (context,
+                                                                            index) {
+                                                                      final player =
+                                                                          game.players[
+                                                                              index];
+                                                                      return Padding(
+                                                                        padding: const EdgeInsets
+                                                                            .symmetric(
+                                                                            vertical:
+                                                                                4),
+                                                                        child:
+                                                                            Row(
+                                                                          children: [
+                                                                            const Icon(
+                                                                              Icons.person_rounded,
+                                                                              color: Colors.white,
+                                                                              size: 25,
+                                                                            ),
+                                                                            const SizedBox(width: 4),
+                                                                            Text(
+                                                                              player.name,
+                                                                              style: const TextStyle(
+                                                                                fontFamily: "Poppins",
+                                                                                fontSize: 16,
+                                                                                color: Colors.white,
+                                                                                fontWeight: FontWeight.w500,
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    },
+                                                                  ),
                                                       ),
-                                                      textColor: Colors.black,
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 16),
-                                                  Expanded(
-                                                    child: _GameButton(
-                                                      onPressed: _shareGameInvite,
-                                                      text: 'INVITE FRIENDS',
-                                                      icon: Icons.share_rounded,
-                                                      gradient: LinearGradient(
-                                                        colors: [
-                                                          Colors.blue.shade600,
-                                                          Colors.blue.shade800
-                                                        ],
+                                                    const SizedBox(height: 30),
+                                                    // Action buttons
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Expanded(
+                                                          child: _GameButton(
+                                                            onPressed: game
+                                                                        .players
+                                                                        .length >=
+                                                                    3
+                                                                ? _handleStartGame
+                                                                : null,
+                                                            text: 'START GAME',
+                                                            icon: Icons
+                                                                .play_arrow_rounded,
+                                                            gradient:
+                                                                LinearGradient(
+                                                              colors: [
+                                                                Colors.amber
+                                                                    .shade600,
+                                                                Colors.amber
+                                                                    .shade800
+                                                              ],
+                                                            ),
+                                                            textColor:
+                                                                Colors.black,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 16),
+                                                        Expanded(
+                                                          child: _GameButton(
+                                                            onPressed:
+                                                                _shareGameInvite,
+                                                            text:
+                                                                'INVITE FRIENDS',
+                                                            icon: Icons
+                                                                .share_rounded,
+                                                            gradient:
+                                                                LinearGradient(
+                                                              colors: [
+                                                                Colors.blue
+                                                                    .shade600,
+                                                                Colors.blue
+                                                                    .shade800
+                                                              ],
+                                                            ),
+                                                            textColor:
+                                                                Colors.white,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    if (_voiceChatService !=
+                                                        null) ...[
+                                                      const SizedBox(
+                                                          height: 20),
+                                                      GestureDetector(
+                                                        onTap: () =>
+                                                            _voiceChatService!
+                                                                .toggleMute(),
+                                                        child: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(12),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            color: _voiceChatService!
+                                                                    .isMuted
+                                                                ? Colors.red
+                                                                    .withOpacity(
+                                                                        0.7)
+                                                                : Colors.green
+                                                                    .withOpacity(
+                                                                        0.7),
+                                                          ),
+                                                          child: Icon(
+                                                            _voiceChatService!
+                                                                    .isMuted
+                                                                ? CupertinoIcons
+                                                                    .mic_slash_fill
+                                                                : CupertinoIcons
+                                                                    .mic_fill,
+                                                            color: Colors.white,
+                                                            size: 24,
+                                                          ),
+                                                        ),
                                                       ),
-                                                      textColor: Colors.white,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              if (_voiceChatService != null) ...[
-                                                const SizedBox(height: 20),
-                                                GestureDetector(
-                                                  onTap: () => _voiceChatService!.toggleMute(),
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(12),
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: _voiceChatService!.isMuted
-                                                          ? Colors.red.withOpacity(0.7)
-                                                          : Colors.green.withOpacity(0.7),
-                                                    ),
-                                                    child: Icon(
-                                                      _voiceChatService!.isMuted
-                                                          ? CupertinoIcons.mic_slash_fill
-                                                          : CupertinoIcons.mic_fill,
-                                                      color: Colors.white,
-                                                      size: 24,
-                                                    ),
-                                                  ),
+                                                    ],
+                                                    if (_voiceChatService
+                                                            ?.remoteRenderers !=
+                                                        null)
+                                                      VoiceChatAudioRenderers(
+                                                          remoteRenderers:
+                                                              _voiceChatService!
+                                                                  .remoteRenderers),
+                                                  ],
                                                 ),
-                                              ],
-                                            ],
-                                          ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              width: 100,
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                      SizedBox(width: 100,),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
+                                ),
+                              )
                             : SingleChildScrollView(
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
@@ -1660,6 +1819,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                 ),
                                               ),
                                             ],
+                                            if (_voiceChatService
+                                                ?.remoteRenderers !=
+                                                null)
+                                              VoiceChatAudioRenderers(
+                                                  remoteRenderers:
+                                                  _voiceChatService!
+                                                      .remoteRenderers),
                                           ],
                                         ),
                                       ),
@@ -1944,11 +2110,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       horizontal: 8,
                                                       vertical: 4),
                                                   decoration: BoxDecoration(
-                                                    color:
-                                                    Colors.redAccent,
+                                                    color: Colors.redAccent,
                                                     borderRadius:
-                                                    BorderRadius.circular(
-                                                        10),
+                                                        BorderRadius.circular(
+                                                            10),
                                                   ),
                                                   child: Row(
                                                     children: [
@@ -1965,7 +2130,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                           color: Colors.white,
                                                           fontSize: 16,
                                                           fontWeight:
-                                                          FontWeight.w500,
+                                                              FontWeight.w500,
                                                         ),
                                                       ),
                                                     ],
@@ -2106,14 +2271,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       final card =
                                                           game.pile.last[i];
                                                       return Tooltip(
-                                                        message: card.isJoker
-                                                            ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                                            : card.isDetails
-                                                                ? 'Details Card'
-                                                                : '${card.rank} of ${card.suit}',
-                                                        child: CardWidget(
-                                                            card: card,)
-                                                      );
+                                                          message: card.isJoker
+                                                              ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                                              : card.isDetails
+                                                                  ? 'Details Card'
+                                                                  : '${card.rank} of ${card.suit}',
+                                                          child: CardWidget(
+                                                            card: card,
+                                                          ));
                                                     },
                                                   )
                                                 : Center(
@@ -2161,7 +2326,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           Spacer(),
                                           Row(
                                             mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
+                                                MainAxisAlignment.spaceEvenly,
                                             children: [
                                               Expanded(
                                                 child: AnimatedScaleButton(
@@ -2169,14 +2334,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       ? _handlePass
                                                       : null,
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 10.0),
                                                     child: const Text(
                                                       'Pass',
                                                       style: TextStyle(
                                                         fontFamily: "Poppins",
                                                         color: Colors.white,
                                                         fontWeight:
-                                                        FontWeight.w500,
+                                                            FontWeight.w500,
                                                         fontSize: 20,
                                                       ),
                                                     ),
@@ -2184,12 +2351,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                   tooltip: game.isTestMode
                                                       ? 'Passing not allowed in test mode'
                                                       : (game.pile.isEmpty &&
-                                                      game.passCount ==
-                                                          0 &&
-                                                      player.hand
-                                                          .isNotEmpty)
-                                                      ? 'Cannot Pass'
-                                                      : '',
+                                                              game.passCount ==
+                                                                  0 &&
+                                                              player.hand
+                                                                  .isNotEmpty)
+                                                          ? 'Cannot Pass'
+                                                          : '',
                                                 ),
                                               ),
                                               const SizedBox(width: 10),
@@ -2199,40 +2366,44 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       _voiceChatService!
                                                           .toggleMute(),
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 10.0),
                                                     child: Icon(
                                                       _voiceChatService!.isMuted
                                                           ? CupertinoIcons
-                                                          .mic_slash_fill
+                                                              .mic_slash_fill
                                                           : CupertinoIcons
-                                                          .mic_fill,
+                                                              .mic_fill,
                                                       color: Colors.white,
                                                       size: 26,
                                                     ),
                                                   ),
                                                   tooltip:
-                                                  _voiceChatService!.isMuted
-                                                      ? 'Unmute'
-                                                      : 'Mute',
+                                                      _voiceChatService!.isMuted
+                                                          ? 'Unmute'
+                                                          : 'Mute',
                                                 ),
                                               const SizedBox(width: 10),
                                               Expanded(
                                                 child: AnimatedScaleButton(
                                                   onPressed: isMyTurn &&
-                                                      selectedCards
-                                                          .isNotEmpty
+                                                          selectedCards
+                                                              .isNotEmpty
                                                       ? () => _playCards(
-                                                      selectedCards)
+                                                          selectedCards)
                                                       : null,
                                                   child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 10.0),
                                                     child: const Text(
                                                       'Play',
                                                       style: TextStyle(
                                                         fontFamily: "Poppins",
                                                         color: Colors.white,
                                                         fontWeight:
-                                                        FontWeight.w500,
+                                                            FontWeight.w500,
                                                         fontSize: 20,
                                                       ),
                                                     ),
@@ -2242,7 +2413,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                             ],
                                           ),
                                           const SizedBox(height: 10),
-
                                         ],
                                       ),
                                     ),
@@ -2302,7 +2472,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                     crossAxisSpacing:
                                                                         4,
                                                                     childAspectRatio:
-                                                                       1.20 /
+                                                                        1.20 /
                                                                             1.75,
                                                                   ),
                                                                   itemBuilder:
@@ -2531,7 +2701,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                             ),
                                           ),
                                           const SizedBox(height: 10),
-
                                         ],
                                       ),
                                     ),
@@ -2541,9 +2710,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             : Column(
                                 children: [
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal:8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
                                       children: [
                                         LeaveButton(
                                           onPressed: () {
@@ -2551,7 +2722,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                               context: context,
                                               builder: (BuildContext context) {
                                                 return CupertinoAlertDialog(
-                                                  title: const Text("Leave Game"),
+                                                  title:
+                                                      const Text("Leave Game"),
                                                   content: const Text(
                                                       "Are you sure you want to Leave the game?"),
                                                   actions: <Widget>[
@@ -2570,7 +2742,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                     ),
                                                     CupertinoDialogAction(
                                                       isDestructiveAction: true,
-                                                      child: const Text("Leave"),
+                                                      child:
+                                                          const Text("Leave"),
                                                       onPressed: () {
                                                         _handleLeaveGame();
                                                       },
@@ -2683,7 +2856,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                     ),
                                   const SizedBox(height: 20),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
                                     child: Container(
                                       height: 157,
                                       decoration: BoxDecoration(
@@ -2900,8 +3074,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                             card,
                                                                         isSelected:
                                                                             selectedCards.contains(card),
-                                                                        cardWidth: double.infinity,
-                                                                        cardHeight: double.infinity,
+                                                                        cardWidth:
+                                                                            double.infinity,
+                                                                        cardHeight:
+                                                                            double.infinity,
                                                                         onTap: isMyTurn
                                                                             ? () {
                                                                                 setState(() {
@@ -3040,7 +3216,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   ),
                                   const SizedBox(height: 10),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal:8.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceEvenly,
@@ -3067,14 +3244,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                     : '',
                                           ),
                                         ),
-                                        SizedBox(width:4),
+                                        SizedBox(width: 4),
                                         if (_voiceChatService != null)
                                           AnimatedScaleButton(
                                             onPressed: () =>
                                                 _voiceChatService!.toggleMute(),
                                             child: Icon(
                                               _voiceChatService!.isMuted
-                                                  ? CupertinoIcons.mic_slash_fill
+                                                  ? CupertinoIcons
+                                                      .mic_slash_fill
                                                   : CupertinoIcons.mic_fill,
                                               color: Colors.white,
                                               size: 22,
@@ -3083,12 +3261,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                 ? 'Unmute'
                                                 : 'Mute',
                                           ),
-                                        SizedBox(width:4),
+                                        SizedBox(width: 4),
                                         Expanded(
                                           child: AnimatedScaleButton(
                                             onPressed: isMyTurn &&
                                                     selectedCards.isNotEmpty
-                                                ? () => _playCards(selectedCards)
+                                                ? () =>
+                                                    _playCards(selectedCards)
                                                 : null,
                                             child: const Text(
                                               'Play',

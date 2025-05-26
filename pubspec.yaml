@@ -52,11 +52,25 @@ dependencies:
   universal_html: ^2.2.4
   connectivity_plus: ^6.1.1
   internet_connection_checker: ^3.0.1
+  crypto: ^3.0.6
+
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/icon/webicon.png"
+    background_color: "#003391"
+    theme_color: "#2196F3FF"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
@@ -27,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _nameController = TextEditingController();
-  String _playerName = 'Player'; // Default name
+  String _playerName = 'BO${List.generate(4, (index) => String.fromCharCode((65 + Random().nextInt(26)))).join()}';
   late StreamSubscription<List<ConnectivityResult>>
   subscription; // Update the type here
   var isDeviceConnected = false;
@@ -42,10 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // disableRightClick();
   }
 
+
+
   Future<void> _loadName() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _playerName = prefs.getString('player_name') ?? 'Player';
+      _playerName = prefs.getString('player_name') ?? 'BO${List.generate(4, (index) => String.fromCharCode((65 + Random().nextInt(26)))).join()}';
     });
   }
 
@@ -69,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showNameDialog({String? initialName}) {
-    _nameController.text = initialName ?? '';
+    _nameController.text = initialName ?? _playerName;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -122,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 filled: true,
                 fillColor: Colors.grey.shade100,
               ),
-              maxLength: 9,
+              maxLength: 10,
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 16,
@@ -356,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return false;
       },
       child: Scaffold(
-      extendBodyBehindAppBar: true,
+        extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
         //Appbar with Welcome and editable Name
         appBar: AppBar(

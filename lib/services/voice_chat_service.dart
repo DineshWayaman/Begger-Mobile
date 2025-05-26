@@ -14,6 +14,7 @@ class VoiceChatService with ChangeNotifier {
   bool isMuted = false;
   final String connectionId = const Uuid().v4();
   late final Map<String, dynamic> _iceServers;
+  final Map<String, webrtc.RTCVideoRenderer> remoteRenderers = {};
 
   // Coturn server configuration
   static const String _coturnIp = '65.2.83.124'; // Your EC2 public IP
@@ -58,7 +59,12 @@ class VoiceChatService with ChangeNotifier {
   Future<void> _initialize() async {
     try {
       localStream = await webrtc.navigator.mediaDevices.getUserMedia({
-        'audio': true,
+        'audio': {
+          'echoCancellation': true, // Enable echo cancellation
+          'noiseSuppression': true, // Enable noise suppression
+          'autoGainControl': true, // Enable automatic gain control
+          'channelCount': 1, // Mono audio for better processing
+        },
         'video': false,
       });
       debugPrint('Local audio stream initialized');
@@ -105,8 +111,14 @@ class VoiceChatService with ChangeNotifier {
         }
       };
 
-      peer.onTrack = (webrtc.RTCTrackEvent event) {
+      // Add onTrack event
+      peer.onTrack = (webrtc.RTCTrackEvent event) async {
         debugPrint('Received remote stream from $targetConnectionId');
+        if (event.streams.isNotEmpty) {
+          // Attach remote stream to a renderer (Web needs this for audio output)
+          await _attachRemoteStream(targetConnectionId, event.streams.first);
+        }
+        notifyListeners();
       };
 
       if (isOffer) {
@@ -126,6 +138,15 @@ class VoiceChatService with ChangeNotifier {
       debugPrint('Error creating peer connection: $e');
       rethrow;
     }
+  }
+  Future<void> _attachRemoteStream(String connectionId, webrtc.MediaStream remoteStream) async {
+    if (!remoteRenderers.containsKey(connectionId)) {
+      final renderer = webrtc.RTCVideoRenderer();
+      await renderer.initialize();
+      remoteRenderers[connectionId] = renderer;
+    }
+    remoteRenderers[connectionId]!.srcObject = remoteStream;
+    // No need to attach to UI for audio, but renderer must stay alive!
   }
 
   Future<void> _handleSignaling(Map<String, dynamic> data) async {
@@ -208,6 +229,14 @@ class VoiceChatService with ChangeNotifier {
     localStream?.dispose();
     peerConnections.forEach((_, peer) => peer.close());
     peerConnections.clear();
+
+
+    remoteRenderers.forEach((_, renderer) {
+      renderer.srcObject = null;
+      renderer.dispose();
+    });
+    remoteRenderers.clear();
+
     _webSocketService.socket.off('voiceSignal');
     debugPrint('VoiceChatService disposed');
   }
