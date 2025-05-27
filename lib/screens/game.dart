@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:begger_card_game/models/player.dart';
 import 'package:begger_card_game/screens/home_screen.dart';
 import 'package:begger_card_game/widgets/leave_button.dart';
@@ -52,6 +53,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _timerController; // Pass Timer: Controller for turn timer animation
   String? _currentTurnPlayerId; // Pass Timer: Track current turn player
   double _timerProgress = 0.0; // Pass Timer: Track timer progress
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -130,6 +132,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         );
       }
     });
+    _audioPlayer.setSource(AssetSource('sounds/suffel.mp3'));
+    _audioPlayer.setSource(AssetSource('sounds/play.mp3'));
   }
 
   Future<void> _initializeVoiceChat() async {
@@ -190,6 +194,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ws.onDismissDialog = null;
     ws.onTurnTimerStart = null; // Pass Timer: Clear timer callback
     ws.socket.off('gameEnded');
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -658,7 +663,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
 
     final player = game.players.firstWhere(
-      (p) => p.id == widget.playerId,
+          (p) => p.id == widget.playerId,
       orElse: () => Player(id: widget.playerId, name: 'Unknown', hand: []),
     );
 
@@ -680,8 +685,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Play cancelled', style: TextStyle(fontFamily: "Poppins")),
+            content: Text('Play cancelled',
+                style: TextStyle(fontFamily: "Poppins")),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -691,7 +696,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     final playedCardIds = assignedCards.map(_cardId).toList();
     final remainingHand =
-        player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
+    player.hand.where((c) => !playedCardIds.contains(_cardId(c))).toList();
 
     if (game.isTestMode) {
       setState(() {
@@ -700,6 +705,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         selectedCards = [];
         _lastSentHand = List.from(remainingHand);
       });
+      // Play card play sound
+      await _audioPlayer.play(AssetSource('sounds/play.mp3'));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -709,11 +716,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         );
       }
-      ws.playPattern(
-          widget.gameId, widget.playerId, assignedCards, remainingHand);
+      ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
     } else {
-      ws.playPattern(
-          widget.gameId, widget.playerId, assignedCards, remainingHand);
+      ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
       if (ws.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -723,11 +728,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         );
         ws.error = null;
+      } else {
+        // Play card play sound
+        await _audioPlayer.play(AssetSource('sounds/play.mp3'));
+        setState(() {
+          selectedCards = [];
+          _lastSentHand = List.from(remainingHand);
+        });
       }
-      setState(() {
-        selectedCards = [];
-        _lastSentHand = List.from(remainingHand);
-      });
     }
   }
 
@@ -781,9 +789,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _handleStartGame() {
+  void _handleStartGame()  {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.startGame(widget.gameId, widget.playerId);
+    _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
     if (ws.error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -796,7 +805,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _handleRestartGame() {
+  void _handleRestartGame() async {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
@@ -820,9 +829,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _lastJokerMessage = null;
       });
       _initializeVoiceChat(); // Reinitialize voice chat for new game
+      await _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<WebSocketService>(

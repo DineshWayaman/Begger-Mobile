@@ -26,13 +26,21 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
   String _playerName = 'BO${List.generate(4, (index) => String.fromCharCode((65 + Random().nextInt(26)))).join()}';
-  late StreamSubscription<List<ConnectivityResult>>
-  subscription; // Update the type here
+  late StreamSubscription<List<ConnectivityResult>> subscription;
   var isDeviceConnected = false;
   bool isAlertSet = false;
+  late AnimationController _particleAnimationController;
+  late Animation<double> _particleAnimation;
+  late AnimationController _buttonAnimationController;
+  late AnimationController _logoAnimationController;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoRotation;
+  List<Animation<Offset>> _buttonSlideAnimations = [];
+  List<Animation<double>> _buttonFadeAnimations = [];
+  bool _animationsInitialized = false;
 
   @override
   void initState() {
@@ -40,10 +48,125 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadName();
     _checkAndPromptForName();
     listenToConnectionChanges();
-    // disableRightClick();
+    _initializeAnimations();
   }
 
+  void _initializeAnimations() {
+    // Particle animation
+    _particleAnimationController = AnimationController(
+      duration: const Duration(seconds: 10),
+      vsync: this,
+    )..repeat();
 
+    _particleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 2 * pi,
+    ).animate(_particleAnimationController);
+
+    // Logo animation
+    _logoAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _logoScale = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _logoRotation = Tween<double>(
+      begin: -0.2,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _logoAnimationController,
+      curve: Curves.easeOutBack,
+    ));
+
+    // Button animations
+    _buttonAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    // Create staggered animations for 5 buttons
+    for (int i = 0; i < 5; i++) {
+      final slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _buttonAnimationController,
+        curve: Interval(
+          i * 0.1,
+          0.5 + (i * 0.1),
+          curve: Curves.easeOutBack,
+        ),
+      ));
+
+      final fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _buttonAnimationController,
+        curve: Interval(
+          i * 0.1,
+          0.5 + (i * 0.1),
+          curve: Curves.easeOut,
+        ),
+      ));
+
+      _buttonSlideAnimations.add(slideAnimation);
+      _buttonFadeAnimations.add(fadeAnimation);
+    }
+
+    // Start animations
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _logoAnimationController.forward();
+      Future.delayed(const Duration(milliseconds: 800), () {
+        _buttonAnimationController.forward();
+      });
+    });
+
+    _animationsInitialized = true;
+  }
+
+  Widget _buildFloatingParticles() {
+    return AnimatedBuilder(
+      animation: _particleAnimation,
+      builder: (context, child) {
+        return Stack(
+          children: List.generate(6, (index) {
+            final angle = (index * pi / 3) + _particleAnimation.value;
+            final radius = 150.0 + (sin(_particleAnimation.value + index) * 30);
+            final x = cos(angle) * radius;
+            final y = sin(angle) * radius;
+
+            return Positioned(
+              left: MediaQuery.of(context).size.width / 2 + x,
+              top: MediaQuery.of(context).size.height / 2 + y,
+              child: Container(
+                width: 4 + (sin(_particleAnimation.value + index) * 2),
+                height: 4 + (sin(_particleAnimation.value + index) * 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3 + sin(_particleAnimation.value + index) * 0.2),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.shade200.withOpacity(0.5),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
 
   Future<void> _loadName() async {
     final prefs = await SharedPreferences.getInstance();
@@ -78,11 +201,11 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
-        elevation: 12,
-        backgroundColor: Colors.white.withOpacity(0.95),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        elevation: 20,
+        backgroundColor: Colors.white.withOpacity(0.98),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20),
         title: Text(
           initialName == null ? 'Enter Your Name' : 'Edit Your Name',
@@ -90,95 +213,133 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w900,
-            fontSize: 24,
+            fontSize: 26,
             color: Colors.black87,
-
+            letterSpacing: 0.5,
           ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Your Name',
-                counterText: '',
-                hintStyle: const TextStyle(
-                  fontFamily: 'Poppins',
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.person,
-                  color: Colors.blue.shade600,
-                  size: 20,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.1),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              maxLength: 10,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
+              child: TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  hintText: 'Your Name',
+                  counterText: '',
+                  hintStyle: const TextStyle(
+                    fontFamily: 'Poppins',
+                    color: Colors.grey,
+                    fontSize: 16,
+                  ),
+                  prefixIcon: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      color: Colors.blue.shade600,
+                      size: 22,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.grey.shade300, width: 2),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide(color: Colors.blue.shade600, width: 2.5),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                maxLength: 10,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
               ),
             ),
           ],
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        actionsAlignment: MainAxisAlignment.end,
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
-
-          TextButton(
-            onPressed: () {
-              final name = _nameController.text.trim();
-              if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                      'Please enter a name (up to 9 characters)',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w500,
+          Container(
+            width: double.infinity,
+            height: 55,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade600, Colors.blue.shade700],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade300.withOpacity(0.5),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextButton(
+              onPressed: () {
+                final name = _nameController.text.trim();
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                        'Please enter a name (up to 9 characters)',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      backgroundColor: Colors.red.shade400,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    backgroundColor: Colors.red.shade400,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              } else {
-                _saveName(name);
-                Navigator.of(context).pop();
-              }
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.blue.shade700,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                  );
+                } else {
+                  _saveName(name);
+                  Navigator.of(context).pop();
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
-              elevation: 2,
-            ),
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
@@ -186,20 +347,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
   void _shareInviteWithImage() async {
     try {
-      // Share message
       final String message =
           "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.beggar.cardgame\nor Play online \nhttps://playbeggar.online";
 
       if (kIsWeb) {
-        // Web-specific sharing (text only)
         await Share.share(
           message,
           subject: "Check out this game!",
         );
       } else {
-        // Mobile-specific sharing (text and image)
         final ByteData bytes = await rootBundle.load('assets/images/invite_card.png');
         final Uint8List imageBytes = bytes.buffer.asUint8List();
 
@@ -214,17 +373,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print("Error sharing: $e");
-      // Handle the error (e.g., show a snackbar to the user)
     }
   }
 
   void listenToConnectionChanges() {
     subscription = Connectivity().onConnectivityChanged.listen(
           (List<ConnectivityResult> results) async {
-        // Updated to handle List<ConnectivityResult>
-        // Handle the first result (you can also handle other results if needed)
-        isDeviceConnected =
-        await InternetConnectionChecker.createInstance().hasConnection;
+        isDeviceConnected = await InternetConnectionChecker.createInstance().hasConnection;
         if (!isDeviceConnected && !isAlertSet) {
           showCupertinoDialogBox();
           setState(() => isAlertSet = true);
@@ -232,8 +387,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
-
 
   void showCupertinoDialogBox() {
     showCupertinoDialog(
@@ -288,12 +441,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.pop(context, 'Cancel');
                   setState(() => isAlertSet = false);
 
-                  // Check if the widget is still mounted before calling setState
                   if (!mounted) return;
 
-                  bool isDeviceConnected =
-                  await InternetConnectionChecker.createInstance()
-                      .hasConnection;
+                  bool isDeviceConnected = await InternetConnectionChecker.createInstance().hasConnection;
 
                   if (!isDeviceConnected && !isAlertSet) {
                     showCupertinoDialogBox();
@@ -307,16 +457,20 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-  //disable right click
-  // void disableRightClick() {
-  //   if (kIsWeb) {
-  //     html.document.addEventListener('contextmenu', (event) {
-  //       event.preventDefault();
-  //     });
-  //   }
-  // }
 
+  Widget _buildAnimatedButton(int index, String label, VoidCallback onTap) {
+    if (!_animationsInitialized || index >= _buttonSlideAnimations.length) {
+      return AnimatedMenuButton(label: label, onTap: onTap);
+    }
 
+    return SlideTransition(
+      position: _buttonSlideAnimations[index],
+      child: FadeTransition(
+        opacity: _buttonFadeAnimations[index],
+        child: AnimatedMenuButton(label: label, onTap: onTap),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -361,42 +515,78 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
-        //Appbar with Welcome and editable Name
         appBar: AppBar(
           automaticallyImplyLeading: false,
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
-          title: SizedBox(
+          title: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  "Welcome $_playerName",
-                  style: TextStyle(
-                    fontFamily: "Poppins",
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(
+                    Icons.person_rounded,
                     color: Colors.white,
-
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 4),
-                AnimateIcon(
-                  onTap:() => _showNameDialog(initialName: _playerName),
-                  iconType: IconType.continueAnimation,
-                  animateIcon: AnimateIcons.edit,
-                  width: 25,
-                  height: 25,
-                  toolTip: "Edit Name",
-                  color: Colors.white,
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    _playerName,
+                    style: TextStyle(
+                      fontFamily: "Poppins",
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _showNameDialog(initialName: _playerName),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-
         ),
-
         body: Stack(
           children: [
             // Background
@@ -410,6 +600,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // Floating particles
+            _buildFloatingParticles(),
+
             // Main Content
             Center(
               child: SingleChildScrollView(
@@ -418,76 +611,156 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // Player Name with Edit Icon
-
-
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Blurred image for the glow effect
-                        ImageFiltered(
-                          imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // Adjust blur for glow intensity
-                          child: ColorFiltered(
-                            colorFilter: ColorFilter.mode(
-                              Colors.lightBlueAccent, // Glow color and opacity
-                              BlendMode.srcATop,
+                    // Animated Logo
+                    if (_animationsInitialized) ...[
+                      AnimatedBuilder(
+                        animation: _logoAnimationController,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _logoScale.value,
+                            child: Transform.rotate(
+                              angle: _logoRotation.value,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Blurred image for the glow effect
+                                  ImageFiltered(
+                                    imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                                    child: ColorFiltered(
+                                      colorFilter: ColorFilter.mode(
+                                        Colors.lightBlueAccent,
+                                        BlendMode.srcATop,
+                                      ),
+                                      child: Image.asset(
+                                        "assets/images/beggarlogo.png",
+                                        width: 310,
+                                        height: 310,
+                                      ),
+                                    ),
+                                  ),
+                                  // Original image
+                                  Image.asset(
+                                    "assets/images/beggarlogo.png",
+                                    width: 300,
+                                    height: 300,
+                                  ),
+                                ],
+                              ),
                             ),
-                            child: Image.asset(
-                              "assets/images/beggarlogo.png",
-                              width: 310, // Slightly larger to show glow
-                              height: 310,
+                          );
+                        },
+                      ),
+                    ] else ...[
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          ImageFiltered(
+                            imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                            child: ColorFiltered(
+                              colorFilter: ColorFilter.mode(
+                                Colors.lightBlueAccent,
+                                BlendMode.srcATop,
+                              ),
+                              child: Image.asset(
+                                "assets/images/beggarlogo.png",
+                                width: 310,
+                                height: 310,
+                              ),
                             ),
                           ),
-                        ),
-                        // Original image
-                        Image.asset(
-                          "assets/images/beggarlogo.png",
-                          width: 300,
-                          height: 300,
-                        ),
-                      ],
-                    ),
+                          Image.asset(
+                            "assets/images/beggarlogo.png",
+                            width: 300,
+                            height: 300,
+                          ),
+                        ],
+                      ),
+                    ],
 
-                    // Buttons
+
+
+                    // Animated Buttons
                     Column(
                       spacing: 10,
                       children: [
-                        AnimatedMenuButton(
-                          label: 'Play',
-                          onTap: () async {
+                        _buildAnimatedButton(
+                          0,
+                          'Play',
+                              () async {
+                            // Super smooth transition
                             final prefs = await SharedPreferences.getInstance();
                             final playerName = prefs.getString('player_name') ?? 'Player';
+
                             Navigator.of(context).push(
-                              createAnimatedRoute(LobbyScreen(playerName: playerName)),
+                              PageRouteBuilder(
+                                transitionDuration: const Duration(milliseconds: 800),
+                                reverseTransitionDuration: const Duration(milliseconds: 600),
+                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                    LobbyScreen(playerName: playerName),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  // Curved animation
+                                  final curvedAnimation = CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeInOutCubic,
+                                  );
+
+                                  // Scale and fade transition
+                                  final scaleAnimation = Tween<double>(
+                                    begin: 0.8,
+                                    end: 1.0,
+                                  ).animate(curvedAnimation);
+
+                                  final fadeAnimation = Tween<double>(
+                                    begin: 0.0,
+                                    end: 1.0,
+                                  ).animate(curvedAnimation);
+
+                                  // Slide from bottom
+                                  final slideAnimation = Tween<Offset>(
+                                    begin: const Offset(0, 0.3),
+                                    end: Offset.zero,
+                                  ).animate(curvedAnimation);
+
+                                  return SlideTransition(
+                                    position: slideAnimation,
+                                    child: ScaleTransition(
+                                      scale: scaleAnimation,
+                                      child: FadeTransition(
+                                        opacity: fadeAnimation,
+                                        child: child,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             );
                           },
                         ),
-
-                        AnimatedMenuButton(
-                          label: 'About Game',
-                          onTap: () {
+                        _buildAnimatedButton(
+                          1,
+                          'About Game',
+                              () {
                             showAboutGameBottomSheet(context);
                           },
                         ),
-
-
-
-                        AnimatedMenuButton(
-                          label: 'Terms & Conditions',
-                          onTap: () {
+                        _buildAnimatedButton(
+                          2,
+                          'Terms & Conditions',
+                              () {
                             showTermsAndConditionsBottomSheet(context);
                           },
                         ),
-                        AnimatedMenuButton(
-                          label: 'Invite Friends',
-                          onTap: (){
+                        _buildAnimatedButton(
+                          3,
+                          'Invite Friends',
+                              () {
                             _shareInviteWithImage();
-                          }
+                          },
                         ),
-
-                        AnimatedMenuButton(
-                          label: 'Quit',
-                          onTap: () {
+                        _buildAnimatedButton(
+                          4,
+                          'Quit',
+                              () {
                             showCupertinoDialog(
                               context: context,
                               builder: (BuildContext context) {
@@ -557,10 +830,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
           ],
         ),
-
       ),
     );
   }
@@ -569,24 +840,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _nameController.dispose();
     subscription.cancel();
+    _particleAnimationController.dispose();
+    _buttonAnimationController.dispose();
+    _logoAnimationController.dispose();
     super.dispose();
   }
-}
-
-Route createAnimatedRoute(Widget page) {
-  return PageRouteBuilder(
-    transitionDuration: const Duration(milliseconds: 300),
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final slide = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(animation);
-      final fade = Tween<double>(begin: 0, end: 1).animate(animation);
-      return SlideTransition(
-        position: slide,
-        child: FadeTransition(
-          opacity: fade,
-          child: child,
-        ),
-      );
-    },
-  );
 }

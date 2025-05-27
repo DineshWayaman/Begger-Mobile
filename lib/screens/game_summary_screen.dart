@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
@@ -23,7 +24,7 @@ class GameSummaryScreen extends StatefulWidget {
   final VoidCallback onHomePressed;
   final VoidCallback onReplayPressed;
 
-  GameSummaryScreen({
+  const GameSummaryScreen({
     super.key,
     required this.summaryMessage,
     required this.gameId,
@@ -36,143 +37,172 @@ class GameSummaryScreen extends StatefulWidget {
   State<GameSummaryScreen> createState() => _GameSummaryScreenState();
 }
 
-class _GameSummaryScreenState extends State<GameSummaryScreen> {
+class _GameSummaryScreenState extends State<GameSummaryScreen>
+    with SingleTickerProviderStateMixin {
   final ScreenshotController screenshotController = ScreenshotController();
-
   final GlobalKey _screenshotKey = GlobalKey();
   bool _isRestartEnabled = true;
+  bool _isLoading = false;
+  bool _isHovered = false;
+
+  // Animation controllers
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimations();
+    _setupWebSocketListeners();
+  }
+
+  void _setupAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+    ));
+
+    _animationController.forward();
+  }
+
+  void _setupWebSocketListeners() {
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.socket.on('playerLeft', (data) {
+      if (mounted) {
+        setState(() {
+          _isRestartEnabled = false;
+        });
+        _showEnhancedSnackBar(
+          message: 'A player has left the game',
+          icon: Icons.warning_amber_rounded,
+          color: Colors.orange,
+        );
+      }
+    });
+  }
 
   String _generateUniqueImageName() {
     return 'beggar_game_summary_${widget.playerId}_${DateTime.now().millisecondsSinceEpoch}';
   }
 
-  @override
-  void initState() {
-    super.initState();
-    // Home leave update: Listen for playerLeft event to disable restart button
-    final ws = Provider.of<WebSocketService>(context, listen: false);
-    ws.socket.on('playerLeft', (data) {
-      print('Received playerLeft event: $data'); // Debug log
-      if (mounted) {
-        setState(() {
-          _isRestartEnabled = false;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    // Home leave update: Clean up socket listener
-    final ws = Provider.of<WebSocketService>(context, listen: false);
-    ws.socket.off('playerLeft');
-    super.dispose();
-  }
-
   Future<Uint8List?> _captureScreenshot() async {
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await Future.delayed(const Duration(milliseconds: 200));
-        final RenderBox? renderBox =
-            _screenshotKey.currentContext?.findRenderObject() as RenderBox?;
-        print('Attempt $attempt: Screenshot size: ${renderBox?.size}');
-        if (renderBox == null || renderBox.size.isEmpty) {
-          print('Attempt $attempt: Invalid widget size');
-          continue;
-        }
-        final Uint8List? image = await screenshotController.capture();
-        if (image != null) {
-          print('Attempt $attempt: Screenshot captured successfully');
-          return image;
-        }
-        print('Attempt $attempt: Screenshot capture returned null');
-      } catch (e) {
-        print('Attempt $attempt: Screenshot capture error: $e');
-      }
-    }
-    print('Falling back to RenderRepaintBoundary capture');
+    setState(() => _isLoading = true);
+
     try {
-      final RenderRepaintBoundary? boundary = _screenshotKey.currentContext
-          ?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        throw Exception('Failed to find RenderRepaintBoundary');
+      for (int attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await Future.delayed(const Duration(milliseconds: 200));
+          final image = await screenshotController.capture();
+          if (image != null) {
+            return image;
+          }
+        } catch (e) {
+          print('Screenshot attempt $attempt failed: $e');
+        }
       }
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      if (byteData == null) {
-        throw Exception('Failed to convert image to bytes');
+
+      // Fallback to RenderRepaintBoundary
+      final boundary = _screenshotKey.currentContext?.findRenderObject()
+      as RenderRepaintBoundary?;
+      if (boundary != null) {
+        final image = await boundary.toImage(pixelRatio: 3.0);
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        return byteData?.buffer.asUint8List();
       }
-      final Uint8List imageBytes = byteData.buffer.asUint8List();
-      print('Fallback capture successful');
-      return imageBytes;
     } catch (e) {
-      print('Fallback capture error: $e');
-      throw Exception('Failed to capture screenshot after fallback: $e');
+      print('Screenshot capture error: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
+    return null;
   }
 
   Future<void> _captureAndSave(BuildContext context) async {
     try {
-      final Uint8List? image = await _captureScreenshot();
-      if (image == null) {
-        throw Exception('Failed to capture screenshot');
-      }
+      final image = await _captureScreenshot();
+      if (image == null) throw Exception('Failed to capture screenshot');
 
       if (kIsWeb) {
-        // Web: Trigger a browser download
         final base64 = base64Encode(image);
         final dataUrl = 'data:image/png;base64,$base64';
         final anchor = html.AnchorElement(href: dataUrl)
-          ..setAttribute('download', _generateUniqueImageName() + '.png')
+          ..setAttribute('download', '${_generateUniqueImageName()}.png')
           ..click();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image downloaded!')),
+        _showEnhancedSnackBar(
+          message: 'Image downloaded successfully!',
+          icon: Icons.check_circle_outline,
+          color: Colors.green,
         );
       } else {
-        // Mobile: Use image_gallery_saver_plus
         final result = await ImageGallerySaverPlus.saveImage(
           image,
           quality: 100,
           name: _generateUniqueImageName(),
         );
+
         if (result['isSuccess']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saved to Gallery!')),
+          _showEnhancedSnackBar(
+            message: 'Saved to Gallery!',
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
           );
         } else {
-          throw Exception('Failed to save image: ${result['error']}');
+          throw Exception(result['error']);
         }
       }
     } catch (e) {
-      print('Error saving image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save image: $e')),
+      _showEnhancedSnackBar(
+        message: 'Failed to save image: $e',
+        icon: Icons.error_outline,
+        color: Colors.red,
+        isError: true,
       );
     }
   }
 
   Future<void> _captureAndShare(BuildContext context) async {
-    File? imagePath;
+    File? tempFile;
     try {
-      final Uint8List? image = await _captureScreenshot();
-      if (image == null) {
-        throw Exception('Failed to capture screenshot');
-      }
+      final image = await _captureScreenshot();
+      if (image == null) throw Exception('Failed to capture screenshot');
 
-      final shareText = 'Check out my game summary from the Beggar card game!\n\n${widget.summaryMessage}';
+      final shareText =
+          'Check out my game summary from the Beggar card game!\n\n${widget.summaryMessage}';
       final uniqueName = _generateUniqueImageName();
 
       if (kIsWeb) {
-        // Web: Try Web Share API or fall back to download
         final blob = html.Blob([image], 'image/png');
         final url = html.Url.createObjectUrlFromBlob(blob);
         final fileName = '$uniqueName.png';
 
         if (html.window.navigator.share != null) {
-          // Web Share API is available
           await html.window.navigator.share({
             'title': 'Beggar Card Game Summary',
             'text': shareText,
@@ -180,103 +210,188 @@ class _GameSummaryScreenState extends State<GameSummaryScreen> {
               html.File([blob], fileName, {'type': 'image/png'}),
             ],
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Shared successfully!')),
+          _showEnhancedSnackBar(
+            message: 'Shared successfully!',
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
           );
         } else {
-          // Fallback: Trigger download
           final anchor = html.AnchorElement(href: url)
             ..setAttribute('download', fileName)
             ..click();
           html.Url.revokeObjectUrl(url);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Image downloaded due to lack of Web Share API support')),
+          _showEnhancedSnackBar(
+            message: 'Image downloaded (Web Share not supported)',
+            icon: Icons.info_outline,
+            color: Colors.blue,
           );
         }
       } else {
-        // Mobile: Use share_plus
         final directory = await getTemporaryDirectory();
-        imagePath = File('${directory.path}/$uniqueName.png');
-        await imagePath.writeAsBytes(image);
+        tempFile = File('${directory.path}/$uniqueName.png');
+        await tempFile.writeAsBytes(image);
+
         final result = await Share.shareXFiles(
-          [XFile(imagePath.path, mimeType: 'image/png')],
+          [XFile(tempFile.path, mimeType: 'image/png')],
           text: shareText,
           subject: 'Beggar Card Game Summary',
         );
+
         if (result.status == ShareResultStatus.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Shared successfully!')),
+          _showEnhancedSnackBar(
+            message: 'Shared successfully!',
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
           );
         } else if (result.status == ShareResultStatus.dismissed) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Share canceled')),
+          _showEnhancedSnackBar(
+            message: 'Share canceled',
+            icon: Icons.info_outline,
+            color: Colors.blue,
           );
         } else {
           throw Exception('Share failed with status: ${result.status}');
         }
       }
     } catch (e) {
-      print('Error sharing image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to share image: $e')),
+      _showEnhancedSnackBar(
+        message: 'Failed to share image: $e',
+        icon: Icons.error_outline,
+        color: Colors.red,
+        isError: true,
       );
     } finally {
-      if (!kIsWeb && imagePath != null && await imagePath.exists()) {
-        try {
-          await imagePath.delete();
-          print('Temporary file deleted: ${imagePath.path}');
-        } catch (e) {
-          print('Error deleting temporary file: $e');
-        }
+      if (tempFile != null && await tempFile.exists()) {
+        await tempFile.delete().catchError((e) => print('Error deleting temp file: $e'));
       }
     }
   }
 
-  // Home leave update: Handle Home button with confirmation
+  void _showEnhancedSnackBar({
+    required String message,
+    required IconData icon,
+    required Color color,
+    bool isError = false,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: color,
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: Duration(seconds: isError ? 4 : 2),
+        animation: CurvedAnimation(
+          parent: ModalRoute.of(context)!.animation!,
+          curve: Curves.easeOut,
+        ),
+      ),
+    );
+  }
+
   void _handleHomeWithConfirmation() {
     showCupertinoDialog(
       context: context,
       builder: (BuildContext context) {
-        return CupertinoAlertDialog(
-          title: const Text("Leave Game"),
-          content:
-              const Text("Are you sure you want to return to the Home screen?"),
-          actions: <Widget>[
-            CupertinoDialogAction(
-              child: const Text(
-                "Cancel",
-                style: TextStyle(
-                  color: Colors.blueAccent,
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              child: const Text("Leave"),
-              onPressed: () {
-                final ws =
-                    Provider.of<WebSocketService>(context, listen: false);
-                ws.leaveGameFromSummary(widget.gameId,
-                    widget.playerId); // Home leave update: Use new method
-                widget.onHomePressed();
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-          ],
+        return _buildEnhancedDialog(
+          title: 'Leave Game',
+          content: 'Are you sure you want to return to the Home screen?',
+          onConfirm: () {
+            final ws = Provider.of<WebSocketService>(context, listen: false);
+            ws.leaveGameFromSummary(widget.gameId, widget.playerId);
+            widget.onHomePressed();
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
         );
       },
     );
   }
 
-  // Parse summary message and group civilians
+  void _showRestartDisabledPopup() {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return _buildEnhancedDialog(
+          title: 'Cannot Restart Game',
+          content: "Can't restart the game because someone left the game.",
+          showCancel: false,
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedDialog({
+    required String title,
+    required String content,
+    VoidCallback? onConfirm,
+    bool showCancel = true,
+  }) {
+    final isLargeScreen = MediaQuery.of(context).size.width > 600;
+
+    return CupertinoAlertDialog(
+      title: Text(
+        title,
+        style: TextStyle(
+          fontFamily: "Poppins",
+          fontSize: isLargeScreen ? 20 : 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: Text(
+        content,
+        style: TextStyle(
+          fontFamily: "Poppins",
+          fontSize: isLargeScreen ? 16 : 14,
+        ),
+      ),
+      actions: [
+        if (showCancel)
+          CupertinoDialogAction(
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                fontFamily: "Poppins",
+                color: Colors.blue,
+                fontSize: isLargeScreen ? 16 : 14,
+              ),
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        CupertinoDialogAction(
+          isDestructiveAction: showCancel,
+          child: Text(
+            showCancel ? "Leave" : "OK",
+            style: TextStyle(
+              fontFamily: "Poppins",
+              fontSize: isLargeScreen ? 16 : 14,
+            ),
+          ),
+          onPressed: onConfirm ?? () => Navigator.pop(context),
+        ),
+      ],
+    );
+  }
+
   List<Map<String, dynamic>> _parseSummaryMessage(String message) {
     final List<Map<String, dynamic>> players = [];
     final List<String> civilianNames = [];
-    final lines = message.split('\n');
-    for (var line in lines) {
+
+    for (var line in message.split('\n')) {
       final parts = line.split(': ');
       if (parts.length == 2) {
         final role = parts[1].trim();
@@ -291,367 +406,411 @@ class _GameSummaryScreenState extends State<GameSummaryScreen> {
         }
       }
     }
+
     if (civilianNames.isNotEmpty) {
       players.add({
         'role': civilianNames.length > 1 ? 'Civilians' : 'Civilian',
         'names': civilianNames
       });
     }
+
     const roleOrder = ['King', 'Wise', 'Civilian', 'Civilians', 'Beggar'];
     players.sort((a, b) {
       final aIndex = roleOrder.indexOf(a['role']);
       final bIndex = roleOrder.indexOf(b['role']);
       return aIndex.compareTo(bIndex);
     });
-    return players;
-  }
 
-  // New method to show popup when Restart is attempted after someone leaves
-  void _showRestartDisabledPopup() {
-    showCupertinoDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return CupertinoAlertDialog(
-          title: const Text("Cannot Restart Game"),
-          content: const Text(
-              "Can't restart the game because someone left the game."),
-          actions: <Widget>[
-            CupertinoDialogAction(
-              child: const Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+    return players;
   }
 
   @override
   Widget build(BuildContext context) {
     final players = _parseSummaryMessage(widget.summaryMessage);
     final screenSize = MediaQuery.of(context).size;
-    final isLargeScreen = screenSize.width > 600; // Threshold for web vs mobile
+    final isLargeScreen = screenSize.width > 600;
     final containerWidth = isLargeScreen ? 500.0 : screenSize.width * 0.9;
 
     return WillPopScope(
       onWillPop: () async {
-        // Show confirmation dialog before allowing back navigation
         bool? shouldPop = await showCupertinoDialog<bool>(
           context: context,
-          builder: (BuildContext context) {
-            return CupertinoAlertDialog(
-              title: Text(
-                "Leave Game",
-                style: TextStyle(
-                  fontFamily: "Poppins",
-                  fontSize: isLargeScreen ? 20 : 18,
-                ),
-              ),
-              content: Text(
-                "Are you sure you want to return to the Home screen?",
-                style: TextStyle(
-                  fontFamily: "Poppins",
-                  fontSize: isLargeScreen ? 16 : 14,
-                ),
-              ),
-              actions: <Widget>[
-                CupertinoDialogAction(
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(
-                      fontFamily: "Poppins",
-                      color: Colors.blueAccent,
-                      fontSize: isLargeScreen ? 16 : 14,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context)
-                        .pop(false); // Return false to prevent pop
-                  },
-                ),
-                CupertinoDialogAction(
-                  isDestructiveAction: true,
-                  child: Text(
-                    "Leave",
-                    style: TextStyle(
-                      fontFamily: "Poppins",
-                      fontSize: isLargeScreen ? 16 : 14,
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop(true); // Return true to allow pop
-                  },
-                ),
-              ],
-            );
-          },
+          builder: (BuildContext context) => _buildEnhancedDialog(
+            title: 'Leave Game',
+            content: 'Are you sure you want to return to the Home screen?',
+            onConfirm: () => Navigator.pop(context, true),
+          ),
         );
 
-        // If the user confirms, perform the leave game logic
         if (shouldPop == true) {
           final ws = Provider.of<WebSocketService>(context, listen: false);
-          ws.leaveGameFromSummary(
-              widget.gameId, widget.playerId); // Notify WebSocket
-          widget.onHomePressed(); // Trigger home callback
-          return true; // Allow navigation
+          ws.leaveGameFromSummary(widget.gameId, widget.playerId);
+          widget.onHomePressed();
         }
-        return false; // Prevent navigation if canceled
+        return shouldPop ?? false;
       },
       child: Scaffold(
         backgroundColor: Colors.teal.shade50,
-        body: Container(
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/beggarbg.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isLargeScreen ? 16 : 20,
-                  vertical: isLargeScreen ? 32 : 16,
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/beggarbg.png'),
+                  fit: BoxFit.cover,
                 ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: containerWidth,
-                  ),
-                  child: Container(
-                    padding: EdgeInsets.only(
-                      left: isLargeScreen ? 24 : 16,
-                      right: isLargeScreen ? 24 : 16,
-                      bottom: isLargeScreen ? 32 : 24,
+              ),
+              child: SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isLargeScreen ? 16 : 20,
+                      vertical: isLargeScreen ? 32 : 16,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Screenshot(
-                          controller: screenshotController,
-                          child: RepaintBoundary(
-                            key: _screenshotKey,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              constraints: BoxConstraints(
-                                minWidth: 200,
-                                minHeight: 100,
-                                maxWidth: containerWidth,
-                              ),
-                              padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Game logo
-                                  Image.asset(
-                                    'assets/images/beggarlogo.png',
-                                    height: isLargeScreen ? 120 : 100,
-                                    width: isLargeScreen ? 120 : 100,
-                                  ),
-                                  Text(
-                                    'SUMMARY',
-                                    style: TextStyle(
-                                      fontFamily: "Poppins",
-                                      fontSize: isLargeScreen ? 28 : 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                      height: 1,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  SizedBox(height: isLargeScreen ? 12 : 10),
-                                  // Beautiful list of players
-                                  ListView.separated(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: players.length,
-                                    separatorBuilder: (context, index) =>
-                                        Divider(
-                                      color: Colors.grey,
-                                      thickness: 0.5,
-                                      height: isLargeScreen ? 10 : 8,
-                                    ),
-                                    itemBuilder: (context, index) {
-                                      final player = players[index];
-                                      final role = player['role'] as String;
-                                      final names =
-                                          player['names'] as List<String>;
-                                      final roleColor = {
-                                            'King': Colors.amber[700],
-                                            'Wise': Colors.blue[700],
-                                            'Civilian': Colors.grey[600],
-                                            'Civilians': Colors.grey[600],
-                                            'Beggar': Colors.brown[600],
-                                          }[role] ??
-                                          Colors.black87;
-
-                                      return Container(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: isLargeScreen ? 10 : 8,
-                                          horizontal: isLargeScreen ? 16 : 12,
-                                        ),
-                                        margin: EdgeInsets.symmetric(
-                                          vertical: isLargeScreen ? 4 : 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[50],
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black12,
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              role,
-                                              style: TextStyle(
-                                                fontFamily: "Poppins",
-                                                fontSize:
-                                                    isLargeScreen ? 18 : 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: roleColor,
-                                              ),
-                                            ),
-                                            Flexible(
-                                              child: Text(
-                                                names.join(', '),
-                                                style: TextStyle(
-                                                  fontFamily: "Poppins",
-                                                  fontSize:
-                                                      isLargeScreen ? 18 : 16,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: Colors.black54,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  SizedBox(height: isLargeScreen ? 8 : 5),
-                                  // All rights reserved Beggar
-                                  Text(
-                                    'All rights reserved Beggar Online',
-                                    style: TextStyle(
-                                      fontFamily: "Poppins",
-                                      fontSize: isLargeScreen ? 14 : 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.black54,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: containerWidth),
+                            child: _buildMainContent(isLargeScreen, players),
                           ),
                         ),
-                        Wrap(
-                          spacing: isLargeScreen ? 12 : 10,
-                          runSpacing: isLargeScreen ? 12 : 10,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            _ClassicButton(
-                              onPressed: _handleHomeWithConfirmation,
-                              icon: Icons.home,
-                              color: Colors.blue,
-                              size: isLargeScreen ? 50 : 48,
-                            ),
-                            _ClassicButton(
-                              onPressed: _isRestartEnabled
-                                  ? widget.onReplayPressed
-                                  : () => _showRestartDisabledPopup(),
-                              icon: Icons.replay,
-                              color: _isRestartEnabled
-                                  ? Colors.green
-                                  : Colors.grey,
-                              size: isLargeScreen ? 50 : 48,
-                            ),
-                            _ClassicButton(
-                              onPressed: () => _captureAndShare(context),
-                              icon: Icons.share,
-                              color: Colors.purple,
-                              size: isLargeScreen ? 50 : 48,
-                            ),
-                            _ClassicButton(
-                              onPressed: () => _captureAndSave(context),
-                              icon: Icons.save_alt,
-                              color: Colors.orange,
-                              size: isLargeScreen ? 50 : 48,
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
+            ),
+            if (_isLoading) _buildLoadingOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainContent(bool isLargeScreen, List<Map<String, dynamic>> players) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isLargeScreen ? 24 : 16,
+        vertical: isLargeScreen ? 32 : 24,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            spreadRadius: 5,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildScreenshotContent(isLargeScreen, players),
+          const SizedBox(height: 24),
+          _buildActionButtons(isLargeScreen),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScreenshotContent(bool isLargeScreen, List<Map<String, dynamic>> players) {
+    return Screenshot(
+      controller: screenshotController,
+      child: RepaintBoundary(
+        key: _screenshotKey,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          constraints: BoxConstraints(
+            minWidth: 200,
+            minHeight: 100,
+            maxWidth: isLargeScreen ? 500 : 400,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/beggarlogo.png',
+                height: isLargeScreen ? 120 : 100,
+                width: isLargeScreen ? 120 : 100,
+              ),
+              Text(
+                'SUMMARY',
+                style: TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: isLargeScreen ? 28 : 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ...players.map((player) => _buildPlayerItem(
+                role: player['role'],
+                names: player['names'],
+                isLargeScreen: isLargeScreen,
+              )).toList(),
+              const SizedBox(height: 16),
+              Text(
+                'All rights reserved Beggar Online',
+                style: TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: isLargeScreen ? 14 : 12,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayerItem({
+    required String role,
+    required List<String> names,
+    required bool isLargeScreen,
+  }) {
+    final roleColors = {
+      'King': Colors.amber[700]!,
+      'Wise': Colors.blue[700]!,
+      'Civilian': Colors.grey[600]!,
+      'Civilians': Colors.grey[600]!,
+      'Beggar': Colors.brown[600]!,
+    };
+    final roleColor = roleColors[role] ?? Colors.black87;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(
+        vertical: isLargeScreen ? 12 : 10,
+        horizontal: isLargeScreen ? 16 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: roleColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: roleColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getRoleIcon(role),
+                color: roleColor,
+                size: isLargeScreen ? 24 : 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                role,
+                style: TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: isLargeScreen ? 18 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: roleColor,
+                ),
+              ),
+            ],
+          ),
+          Flexible(
+            child: Text(
+              names.join(', '),
+              style: TextStyle(
+                fontFamily: "Poppins",
+                fontSize: isLargeScreen ? 16 : 14,
+                color: Colors.black54,
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case 'King':
+        return Icons.star; // Alternative: Icons.star, Icons.account_balance
+      case 'Wise':
+        return Icons.lightbulb; // Alternative: Icons.lightbulb, Icons.book, Icons.school
+      case 'Civilian':
+      case 'Civilians':
+        return Icons.people; // Alternative: Icons.group, Icons.person, Icons.home
+      case 'Beggar':
+        return Icons.person_outline; // Alternative: Icons.handshake, Icons.volunteer_activism, Icons.broken_image
+      default:
+        return Icons.person; // Alternative: Icons.question_mark, Icons.account_circle
+    }
+  }
+
+  Widget _buildActionButtons(bool isLargeScreen) {
+    return Wrap(
+      spacing: isLargeScreen ? 16 : 12,
+      runSpacing: isLargeScreen ? 16 : 12,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildEnhancedButton(
+          onPressed: _handleHomeWithConfirmation,
+          icon: Icons.home,
+          color: Colors.blue,
+          tooltip: 'Return Home',
+          isLargeScreen: isLargeScreen,
+        ),
+        _buildEnhancedButton(
+          onPressed: _isRestartEnabled
+              ? widget.onReplayPressed
+              : _showRestartDisabledPopup,
+          icon: Icons.replay,
+          color: _isRestartEnabled ? Colors.green : Colors.grey,
+          tooltip: _isRestartEnabled ? 'Replay Game' : 'Replay Unavailable',
+          isLargeScreen: isLargeScreen,
+        ),
+        _buildEnhancedButton(
+          onPressed: () => _captureAndShare(context),
+          icon: Icons.share,
+          color: Colors.purple,
+          tooltip: 'Share Summary',
+          isLargeScreen: isLargeScreen,
+        ),
+        _buildEnhancedButton(
+          onPressed: () => _captureAndSave(context),
+          icon: Icons.save_alt,
+          color: Colors.orange,
+          tooltip: 'Save Summary',
+          isLargeScreen: isLargeScreen,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required bool isLargeScreen,
+  }) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: Tooltip(
+        message: tooltip,
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 200),
+          tween: Tween<double>(
+            begin: 1.0,
+            end: _isHovered ? 1.05 : 1.0,
+          ),
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: isLargeScreen ? 60 : 50,
+                height: isLargeScreen ? 60 : 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color,
+                      color.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: _isHovered ? 12 : 8,
+                      spreadRadius: _isHovered ? 2 : 1,
+                      offset: Offset(0, _isHovered ? 4 : 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onPressed,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Center(
+                      child: Icon(
+                        icon,
+                        size: isLargeScreen ? 28 : 24,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return AnimatedOpacity(
+      opacity: _isLoading ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        color: Colors.black54,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Processing...',
+                  style: TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _ClassicButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final IconData icon;
-  final Color color;
-  final double size;
-
-  const _ClassicButton({
-    required this.onPressed,
-    required this.icon,
-    required this.color,
-    required this.size,
-  });
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 60,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(horizontal: 12,vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 4,
-          minimumSize: Size(
-            size,
-            size,
-          ),
-        ),
-        child: Icon(icon, size: 24, color: Colors.white),
-      ),
-    );
+  void dispose() {
+    _animationController.dispose();
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.socket.off('playerLeft');
+    super.dispose();
   }
 }
