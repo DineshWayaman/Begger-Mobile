@@ -464,7 +464,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                 child: Center(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isLargeScreen ? 16 : 20,
+                      horizontal: isLargeScreen ? 16 :10,
                       vertical: isLargeScreen ? 32 : 16,
                     ),
                     child: FadeTransition(
@@ -494,7 +494,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   Widget _buildMainContent(bool isLargeScreen, List<Map<String, dynamic>> players) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isLargeScreen ? 24 : 16,
+        horizontal: isLargeScreen ? 15 : 0,
         vertical: isLargeScreen ? 32 : 24,
       ),
       decoration: BoxDecoration(
@@ -513,7 +513,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildScreenshotContent(isLargeScreen, players),
-          const SizedBox(height: 24),
+
           _buildActionButtons(isLargeScreen),
         ],
       ),
@@ -535,39 +535,44 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             minHeight: 100,
             maxWidth: isLargeScreen ? 500 : 400,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/beggarlogo.png',
-                height: isLargeScreen ? 120 : 100,
-                width: isLargeScreen ? 120 : 100,
-              ),
-              Text(
-                'SUMMARY',
-                style: TextStyle(
-                  fontFamily: "Poppins",
-                  fontSize: isLargeScreen ? 28 : 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(height:10),
+                Image.asset(
+                  'assets/images/beggarlogo.png',
+                  height: isLargeScreen ? 120 : 100,
+                  width: isLargeScreen ? 120 : 100,
                 ),
-              ),
-              const SizedBox(height: 20),
-              ...players.map((player) => _buildPlayerItem(
-                role: player['role'],
-                names: player['names'],
-                isLargeScreen: isLargeScreen,
-              )).toList(),
-              const SizedBox(height: 16),
-              Text(
-                'All rights reserved Beggar Online',
-                style: TextStyle(
-                  fontFamily: "Poppins",
-                  fontSize: isLargeScreen ? 14 : 12,
-                  color: Colors.black54,
+                Text(
+                  'SUMMARY',
+                  style: TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: isLargeScreen ? 28 : 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                ...players.map((player) => _buildPlayerItem(
+                  role: player['role'],
+                  names: player['names'],
+                  isLargeScreen: isLargeScreen,
+                )).toList(),
+                const SizedBox(height: 5),
+                Text(
+                  'All rights reserved Beggar Online',
+                  style: TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: isLargeScreen ? 14 : 12,
+                    color: Colors.black54,
+                  ),
+                ),
+                SizedBox(height:10),
+              ],
+            ),
           ),
         ),
       ),
@@ -720,8 +725,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             return Transform.scale(
               scale: scale,
               child: Container(
-                width: isLargeScreen ? 60 : 50,
-                height: isLargeScreen ? 60 : 50,
+                width: isLargeScreen ? 60 : 60,
+                height: isLargeScreen ? 60 : 60,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
