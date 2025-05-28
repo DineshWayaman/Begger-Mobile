@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-import 'dart:ui';
 import 'package:animated_emoji/animated_emoji.dart';
 import 'package:animated_icon/animated_icon.dart';
 import 'package:begger_card_game/widgets/about_game_bottomsheet.dart';
@@ -15,6 +14,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/animated_button.dart';
+import '../widgets/enhanced_glow_widget.dart';
+import '../widgets/floating_particles.dart';
 import '../widgets/terms_conditions_bottomsheet.dart';
 import 'lobby.dart';
 import 'package:universal_html/html.dart' as html;
@@ -33,11 +34,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   var isDeviceConnected = false;
   bool isAlertSet = false;
   late AnimationController _particleAnimationController;
-  late Animation<double> _particleAnimation;
   late AnimationController _buttonAnimationController;
   late AnimationController _logoAnimationController;
+  late AnimationController _glowAnimationController;
   late Animation<double> _logoScale;
   late Animation<double> _logoRotation;
+  late Animation<double> _glowAnimation;
   List<Animation<Offset>> _buttonSlideAnimations = [];
   List<Animation<double>> _buttonFadeAnimations = [];
   bool _animationsInitialized = false;
@@ -57,11 +59,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(seconds: 10),
       vsync: this,
     )..repeat();
-
-    _particleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 2 * pi,
-    ).animate(_particleAnimationController);
 
     // Logo animation
     _logoAnimationController = AnimationController(
@@ -83,6 +80,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate(CurvedAnimation(
       parent: _logoAnimationController,
       curve: Curves.easeOutBack,
+    ));
+
+    // Glow animation
+    _glowAnimationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _glowAnimation = Tween<double>(
+      begin: 0.3,
+      end: 0.7,
+    ).animate(CurvedAnimation(
+      parent: _glowAnimationController,
+      curve: Curves.easeInOut,
     ));
 
     // Button animations
@@ -125,53 +136,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logoAnimationController.forward();
       Future.delayed(const Duration(milliseconds: 800), () {
-        _buttonAnimationController.forward();
+        if (mounted) {
+          _buttonAnimationController.forward();
+        }
       });
     });
 
     _animationsInitialized = true;
   }
 
-  Widget _buildFloatingParticles() {
-    return AnimatedBuilder(
-      animation: _particleAnimation,
-      builder: (context, child) {
-        return Stack(
-          children: List.generate(6, (index) {
-            final angle = (index * pi / 3) + _particleAnimation.value;
-            final radius = 150.0 + (sin(_particleAnimation.value + index) * 30);
-            final x = cos(angle) * radius;
-            final y = sin(angle) * radius;
-
-            return Positioned(
-              left: MediaQuery.of(context).size.width / 2 + x,
-              top: MediaQuery.of(context).size.height / 2 + y,
-              child: Container(
-                width: 4 + (sin(_particleAnimation.value + index) * 2),
-                height: 4 + (sin(_particleAnimation.value + index) * 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3 + sin(_particleAnimation.value + index) * 0.2),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.shade200.withOpacity(0.5),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-
   Future<void> _loadName() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _playerName = prefs.getString('player_name') ?? 'BO${List.generate(4, (index) => String.fromCharCode((65 + Random().nextInt(26)))).join()}';
+      _playerName = prefs.getString('player_name') ?? _playerName;
     });
   }
 
@@ -181,7 +158,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (storedName == null || storedName.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showNameDialog();
+        if (mounted) {
+          _showNameDialog();
+        }
       });
     }
   }
@@ -443,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   if (!mounted) return;
 
-                  bool isDeviceConnected = await InternetConnectionChecker.createInstance().hasConnection;
+                  isDeviceConnected = await InternetConnectionChecker.createInstance().hasConnection;
 
                   if (!isDeviceConnected && !isAlertSet) {
                     showCupertinoDialogBox();
@@ -472,8 +451,89 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildPlayerNameSection(double maxWidth) {
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth * 0.8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              _playerName,
+              style: TextStyle(
+                fontFamily: "Poppins",
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _showNameDialog(initialName: _playerName),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(
+                Icons.edit_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final padding = MediaQuery.of(context).padding;
+    final isLandscape = size.width > size.height;
+    final isWebLarge = kIsWeb && size.width > 800;
+
+    // Calculate responsive logo size
+    final logoSize = isWebLarge
+        ? size.height * 0.8
+        : size.width * (isLandscape ? 0.8 : 0.8);
+    final constrainedLogoSize = logoSize.clamp(150.0, 400.0);
+
     return WillPopScope(
       onWillPop: () async {
         showCupertinoDialog(
@@ -515,308 +575,451 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Scaffold(
         extendBodyBehindAppBar: true,
         resizeToAvoidBottomInset: true,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          title: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    _playerName,
-                    style: TextStyle(
-                      fontFamily: "Poppins",
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _showNameDialog(initialName: _playerName),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ],
+        appBar: isWebLarge
+            ? null // No AppBar on web for large screens
+            : PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: SafeArea(
+            child: AppBar(
+              automaticallyImplyLeading: false,
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              title: _buildPlayerNameSection(size.width),
             ),
           ),
         ),
         body: Stack(
           children: [
             // Background
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              decoration: const BoxDecoration(
-                image: DecorationImage(
+            Container(
+              decoration: BoxDecoration(
+                image: const DecorationImage(
                   image: AssetImage('assets/images/beggarbg.png'),
                   fit: BoxFit.cover,
                 ),
-              ),
-            ),
-
-            // Floating particles
-            _buildFloatingParticles(),
-
-            // Main Content
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    // Animated Logo
-                    if (_animationsInitialized) ...[
-                      AnimatedBuilder(
-                        animation: _logoAnimationController,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: _logoScale.value,
-                            child: Transform.rotate(
-                              angle: _logoRotation.value,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Blurred image for the glow effect
-                                  ImageFiltered(
-                                    imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                                    child: ColorFiltered(
-                                      colorFilter: ColorFilter.mode(
-                                        Colors.lightBlueAccent,
-                                        BlendMode.srcATop,
-                                      ),
-                                      child: Image.asset(
-                                        "assets/images/beggarlogo.png",
-                                        width: 310,
-                                        height: 310,
-                                      ),
-                                    ),
-                                  ),
-                                  // Original image
-                                  Image.asset(
-                                    "assets/images/beggarlogo.png",
-                                    width: 300,
-                                    height: 300,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          ImageFiltered(
-                            imageFilter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                            child: ColorFiltered(
-                              colorFilter: ColorFilter.mode(
-                                Colors.lightBlueAccent,
-                                BlendMode.srcATop,
-                              ),
-                              child: Image.asset(
-                                "assets/images/beggarlogo.png",
-                                width: 310,
-                                height: 310,
-                              ),
-                            ),
-                          ),
-                          Image.asset(
-                            "assets/images/beggarlogo.png",
-                            width: 300,
-                            height: 300,
-                          ),
-                        ],
-                      ),
-                    ],
-
-
-
-                    // Animated Buttons
-                    Column(
-                      spacing: 10,
-                      children: [
-                        _buildAnimatedButton(
-                          0,
-                          'Play',
-                              () async {
-                            // Super smooth transition
-                            final prefs = await SharedPreferences.getInstance();
-                            final playerName = prefs.getString('player_name') ?? 'Player';
-
-                            Navigator.of(context).push(
-                              PageRouteBuilder(
-                                transitionDuration: const Duration(milliseconds: 800),
-                                reverseTransitionDuration: const Duration(milliseconds: 600),
-                                pageBuilder: (context, animation, secondaryAnimation) =>
-                                    LobbyScreen(playerName: playerName),
-                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                  // Curved animation
-                                  final curvedAnimation = CurvedAnimation(
-                                    parent: animation,
-                                    curve: Curves.easeInOutCubic,
-                                  );
-
-                                  // Scale and fade transition
-                                  final scaleAnimation = Tween<double>(
-                                    begin: 0.8,
-                                    end: 1.0,
-                                  ).animate(curvedAnimation);
-
-                                  final fadeAnimation = Tween<double>(
-                                    begin: 0.0,
-                                    end: 1.0,
-                                  ).animate(curvedAnimation);
-
-                                  // Slide from bottom
-                                  final slideAnimation = Tween<Offset>(
-                                    begin: const Offset(0, 0.3),
-                                    end: Offset.zero,
-                                  ).animate(curvedAnimation);
-
-                                  return SlideTransition(
-                                    position: slideAnimation,
-                                    child: ScaleTransition(
-                                      scale: scaleAnimation,
-                                      child: FadeTransition(
-                                        opacity: fadeAnimation,
-                                        child: child,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                        _buildAnimatedButton(
-                          1,
-                          'About Game',
-                              () {
-                            showAboutGameBottomSheet(context);
-                          },
-                        ),
-                        _buildAnimatedButton(
-                          2,
-                          'Terms & Conditions',
-                              () {
-                            showTermsAndConditionsBottomSheet(context);
-                          },
-                        ),
-                        _buildAnimatedButton(
-                          3,
-                          'Invite Friends',
-                              () {
-                            _shareInviteWithImage();
-                          },
-                        ),
-                        _buildAnimatedButton(
-                          4,
-                          'Quit',
-                              () {
-                            showCupertinoDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return CupertinoAlertDialog(
-                                  title: const Text("Exit Game"),
-                                  content: const Text("Are you sure you want to exit the game?"),
-                                  actions: <Widget>[
-                                    CupertinoDialogAction(
-                                      child: const Text(
-                                        "Cancel",
-                                        style: TextStyle(
-                                          color: Colors.blueAccent,
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                    ),
-                                    CupertinoDialogAction(
-                                      isDestructiveAction: true,
-                                      child: const Text("Exit"),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        if (Platform.isAndroid) {
-                                          SystemNavigator.pop();
-                                        } else if (Platform.isIOS) {
-                                          exit(0);
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.blue.withOpacity(0.3),
+                    Colors.purple.withOpacity(0.3),
                   ],
                 ),
               ),
             ),
 
-            // Footer
+            // Floating particles
+            WaveParticles(
+              particleCount: 25,
+              minParticleSize: 5.0,
+              maxParticleSize: 12.0,
+              particleColors: [Colors.yellow, Colors.green, Colors.blue],
+              animationSpeed: 0.7,
+              waveAmplitude: 60.0,
+              waveFrequency: 0.4,
+            ),
+
+
+            // Main content
             SafeArea(
-              minimum: const EdgeInsets.only(bottom: 16),
-              child: Align(
-                alignment: Alignment.bottomCenter,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth;
+                  final maxHeight = constraints.maxHeight;
+
+                  if (isWebLarge) {
+                    // Web layout: Logo on left, buttons and name on right
+                    return Center(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Logo section
+                          Expanded(
+                            flex: 1,
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                left: maxWidth * 0.05,
+                                top: padding.top + 20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _logoAnimationController,
+                                    builder: (context, child) {
+                                      return Transform.scale(
+                                        scale: _logoScale.value,
+                                        child: Transform.rotate(
+                                          angle: _logoRotation.value,
+                                          child: AnimatedBuilder(
+                                            animation: _glowAnimation,
+                                            builder: (context, child) {
+                                              return EnhancedGlowWidget(
+                                                glowOpacity: _glowAnimation.value,
+                                                glowColors: [
+                                                  Colors.blue.withOpacity(0.8),
+                                                  Colors.lightBlueAccent.withOpacity(0.6),
+                                                  Colors.white.withOpacity(0.4),
+                                                ],
+                                                glowSpread: 25.0,
+                                                child: Image.asset(
+                                                  "assets/images/beggarlogo.png",
+                                                  width: constrainedLogoSize,
+                                                  height: constrainedLogoSize,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Buttons and name section
+                          Expanded(
+                            flex: 1,
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: maxWidth * 0.05,
+                                vertical: padding.top + 20,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                  // Buttons
+                                  ConstrainedBox(
+                                    constraints: BoxConstraints(maxWidth: 400),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        // Player name section
+                                        _buildPlayerNameSection(maxWidth),
+                                        SizedBox(height: maxHeight * 0.05),
+                                        _buildAnimatedButton(
+                                          0,
+                                          'Play',
+                                              () async {
+                                            final prefs = await SharedPreferences.getInstance();
+                                            final playerName = prefs.getString('player_name') ?? 'Player';
+                                            Navigator.of(context).push(
+                                              PageRouteBuilder(
+                                                transitionDuration: const Duration(milliseconds: 800),
+                                                reverseTransitionDuration: const Duration(milliseconds: 600),
+                                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                                    LobbyScreen(playerName: playerName),
+                                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                  final curvedAnimation = CurvedAnimation(
+                                                    parent: animation,
+                                                    curve: Curves.easeInOutCubic,
+                                                  );
+                                                  return SlideTransition(
+                                                    position: Tween<Offset>(
+                                                      begin: const Offset(0, 0.3),
+                                                      end: Offset.zero,
+                                                    ).animate(curvedAnimation),
+                                                    child: ScaleTransition(
+                                                      scale: Tween<double>(
+                                                        begin: 0.8,
+                                                        end: 1.0,
+                                                      ).animate(curvedAnimation),
+                                                      child: FadeTransition(
+                                                        opacity: curvedAnimation,
+                                                        child: child,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildAnimatedButton(
+                                          1,
+                                          'About Game',
+                                              () {
+                                            showAboutGameBottomSheet(context);
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildAnimatedButton(
+                                          2,
+                                          'Terms & Conditions',
+                                              () {
+                                            showTermsAndConditionsBottomSheet(context);
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildAnimatedButton(
+                                          3,
+                                          'Invite Friends',
+                                              () {
+                                            _shareInviteWithImage();
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _buildAnimatedButton(
+                                          4,
+                                          'Quit',
+                                              () {
+                                            showCupertinoDialog(
+                                              context: context,
+                                              builder: (BuildContext context) {
+                                                return CupertinoAlertDialog(
+                                                  title: const Text("Exit Game"),
+                                                  content: const Text("Are you sure you want to exit the game?"),
+                                                  actions: <Widget>[
+                                                    CupertinoDialogAction(
+                                                      child: const Text(
+                                                        "Cancel",
+                                                        style: TextStyle(
+                                                          color: Colors.blueAccent,
+                                                        ),
+                                                      ),
+                                                      onPressed: () {
+                                                        Navigator.of(context).pop();
+                                                      },
+                                                    ),
+                                                    CupertinoDialogAction(
+                                                      isDestructiveAction: true,
+                                                      child: const Text("Exit"),
+                                                      onPressed: () {
+                                                        Navigator.of(context).pop();
+                                                        if (Platform.isAndroid) {
+                                                          SystemNavigator.pop();
+                                                        } else if (Platform.isIOS) {
+                                                          exit(0);
+                                                        }
+                                                      },
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    // Mobile/Tablet layout: Logo on top, buttons below, name in AppBar or top
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: maxWidth * 0.05,
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Logo section
+                            AnimatedBuilder(
+                              animation: _logoAnimationController,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _logoScale.value,
+                                  child: Transform.rotate(
+                                    angle: _logoRotation.value,
+                                    child: AnimatedBuilder(
+                                      animation: _glowAnimation,
+                                      builder: (context, child) {
+                                        return EnhancedGlowWidget(
+                                          glowOpacity: _glowAnimation.value,
+                                          glowColors: [
+                                            Colors.blue.withOpacity(0.8),
+                                            Colors.lightBlueAccent.withOpacity(0.6),
+                                            Colors.white.withOpacity(0.4),
+                                          ],
+                                          glowSpread: 25.0,
+                                          child: Image.asset(
+                                            "assets/images/beggarlogo.png",
+                                            width: constrainedLogoSize,
+                                            height: constrainedLogoSize,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            // SizedBox(height: maxHeight * 0.05),
+                            // Buttons
+                            LayoutBuilder(
+                              builder: (context, buttonConstraints) {
+                                final buttonWidth = isLandscape
+                                    ? buttonConstraints.maxWidth * 0.45
+                                    : buttonConstraints.maxWidth * 0.9;
+                                return Wrap(
+                                  spacing: 16,
+                                  runSpacing: 16,
+                                  alignment: WrapAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: buttonWidth.clamp(200.0, 400.0),
+                                      child: Column(
+                                        spacing: 10,
+                                        children: [
+                                          _buildAnimatedButton(
+                                            0,
+                                            'Play',
+                                                () async {
+                                              final prefs = await SharedPreferences.getInstance();
+                                              final playerName = prefs.getString('player_name') ?? 'Player';
+                                              Navigator.of(context).push(
+                                                PageRouteBuilder(
+                                                  transitionDuration: const Duration(milliseconds: 800),
+                                                  reverseTransitionDuration: const Duration(milliseconds: 600),
+                                                  pageBuilder: (context, animation, secondaryAnimation) =>
+                                                      LobbyScreen(playerName: playerName),
+                                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    final curvedAnimation = CurvedAnimation(
+                                                      parent: animation,
+                                                      curve: Curves.easeInOutCubic,
+                                                    );
+                                                    return SlideTransition(
+                                                      position: Tween<Offset>(
+                                                        begin: const Offset(0, 0.3),
+                                                        end: Offset.zero,
+                                                      ).animate(curvedAnimation),
+                                                      child: ScaleTransition(
+                                                        scale: Tween<double>(
+                                                          begin: 0.8,
+                                                          end: 1.0,
+                                                        ).animate(curvedAnimation),
+                                                        child: FadeTransition(
+                                                          opacity: curvedAnimation,
+                                                          child: child,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                          ),
+
+                                          _buildAnimatedButton(
+                                            1,
+                                            'About Game',
+                                                () {
+                                              showAboutGameBottomSheet(context);
+                                            },
+                                          ),
+
+                                          _buildAnimatedButton(
+                                            2,
+                                            'Terms & Conditions',
+                                                () {
+                                              showTermsAndConditionsBottomSheet(context);
+                                            },
+                                          ),
+
+                                          _buildAnimatedButton(
+                                            3,
+                                            'Invite Friends',
+                                                () {
+                                              _shareInviteWithImage();
+                                            },
+                                          ),
+
+                                          _buildAnimatedButton(
+                                            4,
+                                            'Quit',
+                                                () {
+                                              showCupertinoDialog(
+                                                context: context,
+                                                builder: (BuildContext context) {
+                                                  return CupertinoAlertDialog(
+                                                    title: const Text("Exit Game"),
+                                                    content: const Text("Are you sure you want to exit the game?"),
+                                                    actions: <Widget>[
+                                                      CupertinoDialogAction(
+                                                        child: const Text(
+                                                          "Cancel",
+                                                          style: TextStyle(
+                                                            color: Colors.blueAccent,
+                                                          ),
+                                                        ),
+                                                        onPressed: () {
+                                                          Navigator.of(context).pop();
+                                                        },
+                                                      ),
+                                                      CupertinoDialogAction(
+                                                        isDestructiveAction: true,
+                                                        child: const Text("Exit"),
+                                                        onPressed: () {
+                                                          Navigator.of(context).pop();
+                                                          if (Platform.isAndroid) {
+                                                            SystemNavigator.pop();
+                                                          } else if (Platform.isIOS) {
+                                                            exit(0);
+                                                          }
+                                                        },
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          ),
+                                          SizedBox(height: 40,),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+
+            // Footer
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  bottom: padding.bottom + 16,
+                  top: 16,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0),
+                      Colors.black.withOpacity(0.5),
+                    ],
+                  ),
+                ),
                 child: Text(
                   '©2025 Beggar Game. All rights reserved.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: MediaQuery.of(context).size.width < 360 ? 13 : 15,
+                    fontSize: size.width < 360 ? 12 : 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withOpacity(0.9),
                     shadows: const [
@@ -843,6 +1046,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _particleAnimationController.dispose();
     _buttonAnimationController.dispose();
     _logoAnimationController.dispose();
+    _glowAnimationController.dispose();
     super.dispose();
   }
 }

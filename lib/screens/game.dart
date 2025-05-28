@@ -6,6 +6,7 @@ import 'package:animated_icon/animated_icon.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:begger_card_game/models/player.dart';
 import 'package:begger_card_game/screens/home_screen.dart';
+import 'package:begger_card_game/widgets/floating_particles.dart';
 import 'package:begger_card_game/widgets/leave_button.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -920,6 +921,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       'assets/images/beggarbg.png',
                       fit: BoxFit.cover,
                     ),
+                  ),
+                  // Floating particles
+                  WaveParticles(
+                    particleCount: 25,
+                    minParticleSize: 5.0,
+                    maxParticleSize: 12.0,
+                    particleColors: [Colors.yellow, Colors.green, Colors.blue],
+                    animationSpeed: 0.7,
+                    waveAmplitude: 60.0,
+                    waveFrequency: 0.4,
                   ),
                   // Main content
                   SafeArea(

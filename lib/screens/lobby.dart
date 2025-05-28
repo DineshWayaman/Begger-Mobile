@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:begger_card_game/widgets/floating_particles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -107,57 +108,82 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
     final cardWidth = isLargeScreen ? 500.0 : screenSize.width * 0.9;
 
     return Scaffold(
-      body: AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/beggarbg.png'),
-            fit: BoxFit.cover,
+      body: Stack(
+        children: [
+          // Floating particles
+          WaveParticles(
+            particleCount: 25,
+            minParticleSize: 5.0,
+            maxParticleSize: 12.0,
+            particleColors: [Colors.yellow, Colors.green, Colors.blue],
+            animationSpeed: 0.7,
+            waveAmplitude: 60.0,
+            waveFrequency: 0.4,
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isLargeScreen ? 16 : 24,
-                vertical: isLargeScreen ? 32 : 16,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 500),
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/beggarbg.png'),
+                fit: BoxFit.cover,
               ),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: cardWidth),
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 200),
-                          tween: Tween<double>(
-                            begin: 1.0,
-                            end: _isHovered ? 1.02 : 1.0,
+            ),
+
+          ),
+          // Floating particles
+          WaveParticles(
+            particleCount: 25,
+            minParticleSize: 5.0,
+            maxParticleSize: 12.0,
+            particleColors: [Colors.yellow, Colors.green, Colors.blue],
+            animationSpeed: 0.7,
+            waveAmplitude: 60.0,
+            waveFrequency: 0.4,
+          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isLargeScreen ? 16 : 24,
+                  vertical: isLargeScreen ? 32 : 16,
+                ),
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: cardWidth),
+                        child: Card(
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          builder: (context, scale, child) {
-                            return Transform.scale(
-                              scale: scale,
-                              child: child,
-                            );
-                          },
-                          child: Padding(
-                            padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildHeader(isLargeScreen),
-                                SizedBox(height: isLargeScreen ? 32 : 24),
-                                _buildInputFields(isLargeScreen),
-                                SizedBox(height: isLargeScreen ? 32 : 24),
-                                _buildJoinButton(isLargeScreen, websocket),
-                              ],
+                          child: TweenAnimationBuilder<double>(
+                            duration: const Duration(milliseconds: 200),
+                            tween: Tween<double>(
+                              begin: 1.0,
+                              end: _isHovered ? 1.02 : 1.0,
+                            ),
+                            builder: (context, scale, child) {
+                              return Transform.scale(
+                                scale: scale,
+                                child: child,
+                              );
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildHeader(isLargeScreen),
+                                  SizedBox(height: isLargeScreen ? 32 : 24),
+                                  _buildInputFields(isLargeScreen),
+                                  SizedBox(height: isLargeScreen ? 32 : 24),
+                                  _buildJoinButton(isLargeScreen, websocket),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -168,7 +194,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
