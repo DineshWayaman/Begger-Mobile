@@ -115,13 +115,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ws.socket.on('gameEnded', (data) {
       if (mounted) {
         _timerController?.stop(); // Stop timer on game end
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(data['message'], style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 3),
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content:
+        //         Text(data['message'], style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //     duration: const Duration(seconds: 3),
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: data['message'],
+          icon: Icons.info,
+          color: Colors.redAccent,
+          isError: true,
         );
         _hasShownNewRoundMessage = false;
         _shownMessages.clear();
@@ -147,12 +153,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Microphone permission denied. Voice chat disabled.',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Microphone permission denied. Voice chat disabled.',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Microphone permission denied. Voice chat disabled.',
+          icon: Icons.mic_off,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
     }
@@ -272,13 +284,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _lastJokerMessage = jokerMessage;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(jokerMessage,
-                        style: TextStyle(fontFamily: "Poppins")),
-                    backgroundColor: Colors.blueAccent,
-                    duration: const Duration(seconds: 3),
-                  ),
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   SnackBar(
+                //     content: Text(jokerMessage,
+                //         style: TextStyle(fontFamily: "Poppins")),
+                //     backgroundColor: Colors.blueAccent,
+                //     duration: const Duration(seconds: 3),
+                //   ),
+                // );
+                _showEnhancedSnackBar(
+                  message: jokerMessage,
+                  icon: Icons.card_giftcard,
+                  color: Colors.blueAccent,
                 );
               }
             });
@@ -551,12 +568,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
       if (assignedCard == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Joker assignment cancelled',
-                  style: TextStyle(fontFamily: "Poppins")),
-              backgroundColor: Colors.redAccent,
-            ),
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text('Joker assignment cancelled',
+          //         style: TextStyle(fontFamily: "Poppins")),
+          //     backgroundColor: Colors.redAccent,
+          //   ),
+          // );
+          _showEnhancedSnackBar(
+            message: 'Joker assignment cancelled',
+            icon: Icons.cancel,
+            color: Colors.redAccent,
+            isError: true,
           );
         }
         return null;
@@ -632,12 +655,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool _validateDetailsCard(List<Cards> cards) {
     if (cards.any((c) => c.isDetails) && cards.length > 1) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Details card can only be played alone',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Details card can only be played alone',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Details card can only be played alone',
+          icon: Icons.warning,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return false;
@@ -652,12 +681,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final game = ws.game;
     if (game == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Game not loaded',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Game not loaded',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Game not loaded',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return;
@@ -670,12 +705,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     if (player.id == 'Unknown') {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Player not found in game',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Player not found in game',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Player not found in game',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return;
@@ -684,12 +725,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final assignedCards = await _assignJokerValues(cards);
     if (assignedCards == null || assignedCards.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Play cancelled',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Play cancelled',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Play cancelled',
+          icon: Icons.cancel,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return;
@@ -709,24 +756,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       // Play card play sound
       await _audioPlayer.play(AssetSource('sounds/play.mp3'));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Played ${assignedCards.length} cards in test mode',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.green,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Played ${assignedCards.length} cards in test mode',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.green,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Played ${assignedCards.length} cards in test mode',
+          icon: Icons.check_circle,
+          color: Colors.green,
         );
       }
       ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
     } else {
       ws.playPattern(widget.gameId, widget.playerId, assignedCards, remainingHand);
       if (ws.error != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Play failed: ${ws.error}',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Play failed: ${ws.error}',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Play failed: ${ws.error}',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
         );
         ws.error = null;
       } else {
@@ -745,44 +803,67 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final game = ws.game;
     if (game == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Game not loaded',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Game not loaded',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Game not loaded',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return;
     }
     if (game.isTestMode) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Passing not allowed in test mode',
-                style: TextStyle(fontFamily: "Poppins")),
-            backgroundColor: Colors.redAccent,
-          ),
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text('Passing not allowed in test mode',
+        //         style: TextStyle(fontFamily: "Poppins")),
+        //     backgroundColor: Colors.redAccent,
+        //   ),
+        // );
+        _showEnhancedSnackBar(
+          message: 'Passing not allowed in test mode',
+          icon: Icons.block,
+          color: Colors.redAccent,
+          isError: true,
         );
       }
       return;
     }
     ws.pass(widget.gameId, widget.playerId);
     if (ws.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pass failed: ${ws.error}',
-              style: TextStyle(fontFamily: "Poppins")),
-          backgroundColor: Colors.redAccent,
-        ),
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Pass failed: ${ws.error}',
+      //         style: TextStyle(fontFamily: "Poppins")),
+      //     backgroundColor: Colors.redAccent,
+      //   ),
+      // );
+      _showEnhancedSnackBar(
+        message: 'Pass failed: ${ws.error}',
+        icon: Icons.error,
+        color: Colors.redAccent,
+        isError: true,
       );
       ws.error = null;
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Passed!', style: TextStyle(fontFamily: "Poppins")),
-          backgroundColor: Colors.green,
-        ),
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Passed!', style: TextStyle(fontFamily: "Poppins")),
+      //     backgroundColor: Colors.green,
+      //   ),
+      // );
+      _showEnhancedSnackBar(
+        message: 'Passed!',
+        icon: Icons.check_circle,
+        color: Colors.green,
       );
       setState(() {
         selectedCards = [];
@@ -795,12 +876,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ws.startGame(widget.gameId, widget.playerId);
     _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
     if (ws.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to start game: ${ws.error}',
-              style: TextStyle(fontFamily: "Poppins")),
-          backgroundColor: Colors.redAccent,
-        ),
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Failed to start game: ${ws.error}',
+      //         style: TextStyle(fontFamily: "Poppins")),
+      //     backgroundColor: Colors.redAccent,
+      //   ),
+      // );
+      _showEnhancedSnackBar(
+        message: 'Failed to start game: ${ws.error}',
+        icon: Icons.error,
+        color: Colors.redAccent,
+        isError: true,
       );
       ws.error = null;
     }
@@ -813,12 +900,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
     ws.restartGame(widget.gameId, widget.playerId);
     if (ws.error != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to restart game: ${ws.error}',
-              style: TextStyle(fontFamily: "Poppins")),
-          backgroundColor: Colors.redAccent,
-        ),
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Failed to restart game: ${ws.error}',
+      //         style: TextStyle(fontFamily: "Poppins")),
+      //     backgroundColor: Colors.redAccent,
+      //   ),
+      // );
+      _showEnhancedSnackBar(
+        message: 'Failed to restart game: ${ws.error}',
+        icon: Icons.error,
+        color: Colors.redAccent,
+        isError: true,
       );
       ws.error = null;
     } else {
@@ -833,6 +926,45 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       await _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
     }
   }
+
+
+  void _showEnhancedSnackBar({
+    required String message,
+    required IconData icon,
+    required Color color,
+    bool isError = false,
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: color,
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontFamily: "Poppins",
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: Duration(seconds: isError ? 4 : 2),
+        animation: CurvedAnimation(
+          parent: ModalRoute.of(context)!.animation!,
+          curve: Curves.easeOut,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WebSocketService>(
@@ -842,12 +974,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ws.error = null;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error: $errorMessage',
-                      style: const TextStyle(fontFamily: "Poppins")),
-                  backgroundColor: Colors.redAccent,
-                ),
+              // ScaffoldMessenger.of(context).showSnackBar(
+              //   SnackBar(
+              //     content: Text('Error: $errorMessage',
+              //         style: const TextStyle(fontFamily: "Poppins")),
+              //     backgroundColor: Colors.redAccent,
+              //   ),
+              // );
+              _showEnhancedSnackBar(
+                message: 'Error: $errorMessage',
+                icon: Icons.error,
+                color: Colors.redAccent,
+                isError: true,
               );
               if (errorMessage == 'Game is full' ||
                   errorMessage == 'Game has already started') {
@@ -1121,21 +1259,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                 ClipboardData(
                                                                     text: widget
                                                                         .gameId));
-                                                            ScaffoldMessenger
-                                                                    .of(context)
-                                                                .showSnackBar(
-                                                              SnackBar(
-                                                                content:
-                                                                    const Text(
+                                                            // ScaffoldMessenger
+                                                            //         .of(context)
+                                                            //     .showSnackBar(
+                                                            //   SnackBar(
+                                                            //     content:
+                                                            //         const Text(
+                                                            //       'Game ID copied to clipboard',
+                                                            //       style: TextStyle(
+                                                            //           fontFamily:
+                                                            //               "Poppins"),
+                                                            //     ),
+                                                            //     backgroundColor:
+                                                            //         Colors
+                                                            //             .green,
+                                                            //   ),
+                                                            // );
+                                                            _showEnhancedSnackBar(
+                                                              message:
                                                                   'Game ID copied to clipboard',
-                                                                  style: TextStyle(
-                                                                      fontFamily:
-                                                                          "Poppins"),
-                                                                ),
-                                                                backgroundColor:
-                                                                    Colors
-                                                                        .green,
-                                                              ),
+                                                              icon: Icons
+                                                                  .content_copy,
+                                                              color: Colors
+                                                                  .green,
                                                             );
                                                           },
                                                           child: const Icon(
@@ -1588,18 +1734,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                         ClipboardData(
                                                             text:
                                                                 widget.gameId));
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                        content: const Text(
-                                                            'Game ID copied to clipboard',
-                                                            style: TextStyle(
-                                                                fontFamily:
-                                                                    "Poppins")),
-                                                        backgroundColor:
-                                                            Colors.green,
-                                                      ),
+                                                    // ScaffoldMessenger.of(
+                                                    //         context)
+                                                    //     .showSnackBar(
+                                                    //   SnackBar(
+                                                    //     content: const Text(
+                                                    //         'Game ID copied to clipboard',
+                                                    //         style: TextStyle(
+                                                    //             fontFamily:
+                                                    //                 "Poppins")),
+                                                    //     backgroundColor:
+                                                    //         Colors.green,
+                                                    //   ),
+                                                    // );
+                                                    _showEnhancedSnackBar(
+                                                      message:
+                                                          'Game ID copied to clipboard',
+                                                      icon: Icons.content_copy,
+                                                      color: Colors.green,
                                                     );
                                                   },
                                                   child: const Icon(Icons.copy,
