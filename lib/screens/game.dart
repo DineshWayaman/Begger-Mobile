@@ -27,8 +27,10 @@ import 'game_summary_screen.dart';
 class GameScreen extends StatefulWidget {
   final String gameId;
   final String playerId;
+  // autoplay mode: Add flag for single-player mode
+  final bool isSinglePlayer;
 
-  const GameScreen({required this.gameId, required this.playerId, super.key});
+  const GameScreen({required this.gameId, required this.playerId,this.isSinglePlayer = false, super.key});
 
   @override
   _GameScreenState createState() => _GameScreenState();
@@ -55,6 +57,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   String? _currentTurnPlayerId; // Pass Timer: Track current turn player
   double _timerProgress = 0.0; // Pass Timer: Track timer progress
   final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isRestarting = false;
 
   @override
   void initState() {
@@ -81,7 +84,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _timerProgress = _timerController!.value;
         });
       });
-    _initializeVoiceChat();
+    // Initialize voice chat only if not in single-player mode
+    if (!widget.isSinglePlayer) {
+      _initializeVoiceChat();
+    }
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _updateScrollThumbVisibility();
     });
@@ -132,10 +138,37 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _hasShownNewRoundMessage = false;
         _shownMessages.clear();
         //need to end voice chat service
-        _voiceChatService?.dispose();
+        // Dispose voice chat service only if initialized (not single-player)
+        if (!widget.isSinglePlayer) {
+          _voiceChatService?.dispose();
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    });
+    ws.socket.on('gameRestarted', (data) {
+      if (mounted) {
+        // Reset any additional game state if needed
+        setState(() {
+          _isRestarted = true;
+          _isReplayInitiator = false;
+        });
+        // Ensure the game screen is active
+        if (Navigator.canPop(context)) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameScreen(
+              gameId: widget.gameId,
+              playerId: widget.playerId,
+              isSinglePlayer: widget.isSinglePlayer, // Pass single-player flag
+              // Add other parameters
+            ),
+          ),
         );
       }
     });
@@ -144,6 +177,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeVoiceChat() async {
+    // Only initialize voice chat if not in single-player mode
+    if (widget.isSinglePlayer) return;
+
     final permissionStatus = await Permission.microphone.request();
     if (permissionStatus.isGranted) {
       final ws = Provider.of<WebSocketService>(context, listen: false);
@@ -153,13 +189,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     } else {
       if (mounted) {
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(
-        //     content: Text('Microphone permission denied. Voice chat disabled.',
-        //         style: TextStyle(fontFamily: "Poppins")),
-        //     backgroundColor: Colors.redAccent,
-        //   ),
-        // );
         _showEnhancedSnackBar(
           message: 'Microphone permission denied. Voice chat disabled.',
           icon: Icons.mic_off,
@@ -183,7 +212,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _hasShownNewRoundMessage = false;
     _shownMessages.clear();
     _timerController?.stop(); // Pass Timer: Stop timer on leave
-    _voiceChatService?.dispose();
+    // Dispose voice chat service only if initialized (not single-player)
+    if (!widget.isSinglePlayer) {
+      _voiceChatService?.dispose();
+    }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -201,12 +233,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _scrollController.dispose();
     _notificationController?.dispose();
     _timerController?.dispose(); // Pass Timer: Dispose timer controller
-    _voiceChatService?.dispose();
+    // Dispose voice chat service only if initialized (not single-player)
+    if (!widget.isSinglePlayer) {
+      _voiceChatService?.dispose();
+    }
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.removeListener(_onGameStateChanged);
     ws.onDismissDialog = null;
     ws.onTurnTimerStart = null; // Pass Timer: Clear timer callback
     ws.socket.off('gameEnded');
+    ws.socket.off('gameRestarted');
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -366,6 +402,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 _isRestarted = true;
                 _isReplayInitiator = true;
               });
+              Navigator.pop(context); // Dismiss GameSummaryScreen
               _handleRestartGame();
             },
           ),
@@ -893,40 +930,90 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _handleRestartGame() async {
-    final ws = Provider.of<WebSocketService>(context, listen: false);
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-    ws.restartGame(widget.gameId, widget.playerId);
-    if (ws.error != null && mounted) {
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text('Failed to restart game: ${ws.error}',
-      //         style: TextStyle(fontFamily: "Poppins")),
-      //     backgroundColor: Colors.redAccent,
-      //   ),
-      // );
-      _showEnhancedSnackBar(
-        message: 'Failed to restart game: ${ws.error}',
-        icon: Icons.error,
-        color: Colors.redAccent,
-        isError: true,
-      );
-      ws.error = null;
-    } else {
-      setState(() {
-        _hasShownNewRoundMessage = false;
-        _shownMessages.clear();
-        selectedCards = [];
-        _lastSentHand = [];
-        _lastJokerMessage = null;
-      });
-      _initializeVoiceChat(); // Reinitialize voice chat for new game
-      await _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
+  Future<void> _handleRestartGame() async {
+    if (_isRestarting) return;
+    setState(() => _isRestarting = true);
+
+    try {
+      final ws = Provider.of<WebSocketService>(context, listen: false);
+
+      if (Navigator.canPop(context) && _isDialogShowing) {
+        Navigator.pop(context);
+      }
+
+      ws.restartGame(widget.gameId, widget.playerId);
+
+      if (ws.error != null && mounted) {
+        _showEnhancedSnackBar(
+          message: 'Failed to restart game: ${ws.error}',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
+        );
+        ws.error = null;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LobbyScreen()),
+        );
+      } else if (mounted) {
+        // Reset game state
+        setState(() {
+          _hasShownNewRoundMessage = false;
+          _shownMessages.clear();
+          selectedCards = [];
+          _lastSentHand = [];
+          _lastJokerMessage = null;
+          _isDialogShowing = false;
+          _showNewRoundNotification = false;
+          _isRestarted = true;
+          _timerProgress = 0.0;
+          _currentTurnPlayerId = null;
+        });
+
+        if (_timerController != null) {
+          _timerController!.stop();
+          _timerController!.reset();
+        }
+
+        // Initialize voice chat only if not in single-player mode
+        if (!widget.isSinglePlayer) {
+          await _initializeVoiceChat();
+        }
+        await _audioPlayer.play(AssetSource('sounds/suffel.mp3'));
+
+        _showEnhancedSnackBar(
+          message: 'Game restarted successfully!',
+          icon: Icons.restart_alt,
+          color: Colors.green,
+        );
+
+        // Navigate to the game screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameScreen(
+              gameId: widget.gameId,
+              playerId: widget.playerId,
+              isSinglePlayer: widget.isSinglePlayer, // Pass single-player flag
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showEnhancedSnackBar(
+          message: 'An error occurred while restarting: $e',
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRestarting = false);
+      }
     }
   }
-
 
   void _showEnhancedSnackBar({
     required String message,
@@ -3837,3 +3924,4 @@ class _AnimatedDotsState extends State<AnimatedDots>
     );
   }
 }
+

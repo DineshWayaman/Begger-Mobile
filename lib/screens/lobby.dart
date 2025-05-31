@@ -28,11 +28,29 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
 
+  final List<String> _botNameOptions = [
+    'Emma', 'Liam', 'Olivia', 'Noah',
+    'Sophia', 'Jackson', 'Ava', 'Lucas',
+    'Isabella', 'Ethan', 'Mia', 'Mason',
+    'Amelia', 'Logan', 'Harper', 'James',
+    'Elizabeth', 'Thomas', 'Victoria', 'Daniel',
+    'Grace', 'Samuel', 'Lily', 'Matthew',
+    'Emily', 'George', 'Ruby', 'Joseph'
+  ];
+
+  // autoplay mode: Add single-player mode toggle and bot settings
+  bool isSinglePlayer = false;
+  int botCount = 3; // Default to 3 bots (4 players total)
+  late List<TextEditingController> botNameControllers;
+
   @override
   void initState() {
     super.initState();
     _playerNameController = TextEditingController(text: widget.playerName);
     _gameIdController.text = _generateGameId();
+    
+    // Initialize bot name controllers with real names
+    _initBotNameControllers();
 
     // Initialize animations
     _animationController = AnimationController(
@@ -66,6 +84,15 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
 
     // Start the animation
     _animationController.forward();
+  }
+
+  void _initBotNameControllers() {
+    // Shuffle the list of real names to get random selections
+    final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
+    botNameControllers = List.generate(
+      3,
+      (i) => TextEditingController(text: shuffledNames[i]),
+    );
   }
 
   String _generateGameId() {
@@ -128,7 +155,6 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                 fit: BoxFit.cover,
               ),
             ),
-
           ),
           // Floating particles
           WaveParticles(
@@ -156,9 +182,16 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: cardWidth),
                         child: Card(
-                          elevation: 8,
+                          elevation: 12,
+                          shadowColor: Colors.blue.shade900.withOpacity(0.3),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(24),
+                            side: BorderSide(
+                              color: isSinglePlayer 
+                                ? Colors.amber.withOpacity(0.5) 
+                                : Colors.blue.shade300.withOpacity(0.5),
+                              width: 1.5,
+                            ),
                           ),
                           child: TweenAnimationBuilder<double>(
                             duration: const Duration(milliseconds: 200),
@@ -179,7 +212,18 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                                 children: [
                                   _buildHeader(isLargeScreen),
                                   SizedBox(height: isLargeScreen ? 32 : 24),
+                                  // autoplay mode: Add mode toggle
+                                  _buildModeToggle(isLargeScreen),
+                                  Divider(
+                                    color:isSinglePlayer
+                                        ? Colors.amber.withOpacity(0.5)
+                                        : Colors.blue.shade100,
+                                    thickness: 1.5,
+                                    height: isLargeScreen ? 48 : 40,
+                                  ),
                                   _buildInputFields(isLargeScreen),
+                                  // autoplay mode: Add bot settings for single-player
+                                  if (isSinglePlayer) ..._buildBotSettings(isLargeScreen),
                                   SizedBox(height: isLargeScreen ? 32 : 24),
                                   _buildJoinButton(isLargeScreen, websocket),
                                 ],
@@ -194,6 +238,81 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // autoplay mode: Add mode toggle switch
+  Widget _buildModeToggle(bool isLargeScreen) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    'Multiplayer',
+                    style: TextStyle(
+                      fontFamily: "Poppins",
+                      fontSize: isLargeScreen ? 18 : 16,
+                      fontWeight: !isSinglePlayer ? FontWeight.w600 : FontWeight.normal,
+                      color: !isSinglePlayer ? Colors.blue.shade900 : Colors.grey,
+                    ),
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Switch(
+                    value: isSinglePlayer,
+                    onChanged: (value) {
+                      setState(() {
+                        isSinglePlayer = value;
+                        if (isSinglePlayer) {
+                          _gameIdController.text = _generateGameId();
+                          // Shuffle names again when switching to single player
+                          final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
+                          botNameControllers = List.generate(
+                            botCount,
+                            (i) => TextEditingController(text: shuffledNames[i]),
+                          );
+                        }
+                      });
+                    },
+                    activeColor: Colors.amber.shade600,
+                    activeTrackColor: Colors.amber.shade200,
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    'Single Player',
+                    style: TextStyle(
+                      fontFamily: "Poppins",
+                      fontSize: isLargeScreen ? 18 : 16,
+                      fontWeight: isSinglePlayer ? FontWeight.w600 : FontWeight.normal,
+                      color: isSinglePlayer ? Colors.amber.shade800 : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
         ],
       ),
     );
@@ -223,7 +342,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               onTap: () => Navigator.pop(context),
               child: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: Colors.blue.shade900,
+                color: isSinglePlayer ? Colors.amber.shade800 : Colors.blue.shade900,
                 size: isLargeScreen ? 48 : 40,
               ),
             ),
@@ -247,7 +366,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               fontFamily: "Poppins",
               fontSize: isLargeScreen ? 56 : 48,
               fontWeight: FontWeight.bold,
-              color: Colors.blue.shade900,
+              color: isSinglePlayer ? Colors.amber.shade800 : Colors.blue.shade900,
             ),
           ),
         );
@@ -267,20 +386,160 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
         CustomTextField(
           controller: _gameIdController,
           hint: 'Game ID',
-          isReadOnly: false,
-          suffixIcon: _buildCopyButton(),
+          // autoplay mode: Make game ID uneditable in single-player mode
+          isReadOnly: isSinglePlayer,
+          suffixIcon: !isSinglePlayer ? _buildCopyButton() : null,
         ),
-        const SizedBox(height: 8),
-        Text(
-          "Copy this Game ID and share it with your friends or Paste your friend's Game ID",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: isLargeScreen ? 16 : 14,
-            color: Colors.black54,
+        // autoplay mode: Hide instruction text in single-player mode
+        if (!isSinglePlayer) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade600, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Copy this Game ID to share with friends or paste your friend's Game ID",
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 14 : 12,
+                      color: Colors.blue.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
+  }
+  
+  // autoplay mode: Add bot settings UI
+  List<Widget> _buildBotSettings(bool isLargeScreen) {
+    return [
+      SizedBox(height: isLargeScreen ? 24 : 16),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.amber.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.amber.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select Opponents',
+              style: TextStyle(
+                fontFamily: "Poppins",
+                fontSize: isLargeScreen ? 18 : 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.amber.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Opponents: $botCount',
+                  style: TextStyle(
+                    fontFamily: "Poppins",
+                    fontSize: isLargeScreen ? 16 : 14,
+                    color: Colors.amber.shade900,
+                  ),
+                ),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.remove, color: Colors.amber.shade800),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                        onPressed: botCount > 2
+                            ? () {
+                                setState(() {
+                                  botCount--;
+                                  botNameControllers.removeLast();
+                                });
+                              }
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          '$botCount',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add, color: Colors.amber.shade800),
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                        onPressed: botCount < 5
+                            ? () {
+                                setState(() {
+                                  botCount++;
+                                  // Get a name that's not already used
+                                  final usedNames = botNameControllers
+                                      .map((c) => c.text)
+                                      .toList();
+                                  String newName = _botNameOptions.firstWhere(
+                                      (name) => !usedNames.contains(name),
+                                      orElse: () => 'Player ${botCount + 1}');
+                                  botNameControllers.add(
+                                    TextEditingController(text: newName),
+                                  );
+                                });
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(botCount, (index) {
+              return Padding(
+                padding: EdgeInsets.only(top: isLargeScreen ? 12 : 8),
+                child: CustomTextField(
+                  controller: botNameControllers[index],
+                  hint: 'Opponent ${index + 1} Name',
+                  isReadOnly: true,
+                  // prefixIcon: Icon(Icons.person, color: Colors.amber.shade600),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    ];
   }
 
   Widget _buildCopyButton() {
@@ -320,12 +579,16 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.blue.shade600, Colors.blue.shade900],
+                    colors: isSinglePlayer 
+                      ? [Colors.amber.shade500, Colors.orange.shade700]
+                      : [Colors.blue.shade600, Colors.blue.shade900],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.shade200.withOpacity(0.5),
+                      color: isSinglePlayer 
+                        ? Colors.amber.shade200.withOpacity(0.5)
+                        : Colors.blue.shade200.withOpacity(0.5),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -335,7 +598,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                 width: double.infinity,
                 child: Center(
                   child: Text(
-                    'Join/Create Game',
+                    isSinglePlayer ? 'Start Game' : 'Join/Create Game',
                     style: TextStyle(
                       fontFamily: "Poppins",
                       fontSize: isLargeScreen ? 20 : 18,
@@ -364,14 +627,21 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
     }
 
     final playerId = '$gameId-$name';
-    websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
-    websocket.requestGameState(gameId);
+    // autoplay mode: Handle single-player mode
+    if (isSinglePlayer) {
+      final botNames = botNameControllers.map((controller) => controller.text.trim().isEmpty ? 'Bot' : controller.text.trim()).toList();
+      websocket.joinSinglePlayer(gameId, playerId, name, botNames);
+      websocket.startGame(gameId, playerId); // Start game immediately
+    } else {
+      websocket.joinGame(gameId, playerId, name, isTestMode: isTestMode);
+      websocket.requestGameState(gameId);
+    }
 
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            GameScreen(gameId: gameId, playerId: playerId),
+            GameScreen(gameId: gameId, playerId: playerId, isSinglePlayer: isSinglePlayer),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           var begin = const Offset(1.0, 0.0);
           var end = Offset.zero;
@@ -419,6 +689,11 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   void dispose() {
     _gameIdController.dispose();
     _animationController.dispose();
+    _playerNameController.dispose();
+    // Dispose bot name controllers
+    for (var controller in botNameControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 }

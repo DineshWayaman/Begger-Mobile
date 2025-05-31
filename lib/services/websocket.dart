@@ -14,7 +14,7 @@ class WebSocketService with ChangeNotifier {
   void Function(String, int)? onTurnTimerStart; // Pass Timer: Callback for turn timer
 
   WebSocketService() {
-    socket = IO.io('https://playbeggar.online/', <String, dynamic>{
+    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -112,6 +112,20 @@ class WebSocketService with ChangeNotifier {
       'playerId': playerId,
       'playerName': playerName,
       'isTestMode': isTestMode,
+    });
+    notifyListeners();
+  }
+  // autoplay mode: Add single-player join method
+  void joinSinglePlayer(String gameId, String playerId, String playerName, List<String> botNames) {
+    debugPrint('Joining single-player game: $gameId, player: $playerId, bots: $botNames');
+    game = null;
+    gameOverSummary = null;
+    error = null;
+    socket.emit('joinSingle', {
+      'gameId': gameId,
+      'playerId': playerId,
+      'playerName': playerName,
+      'botNames': botNames,
     });
     notifyListeners();
   }
