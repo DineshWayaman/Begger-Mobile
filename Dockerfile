@@ -1,15 +1,20 @@
-# Use official Flutter image or a lightweight base
+# Stage 1: Build the Flutter Web App
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
-# Set working directory
 WORKDIR /app
-
-# Copy project files
 COPY . .
 
-# Build Flutter web app
 RUN flutter pub get
 RUN flutter build web --release
 
+# Stage 2: Serve the app using NGINX
+FROM nginx:alpine
+
+# Copy the built web app from the previous stage
+COPY --from=build /app/build/web /usr/share/nginx/html
+
 # Expose port 80
-EXPOSE 3002
+EXPOSE 80
+
+# Start NGINX in the foreground
+CMD ["nginx", "-g", "daemon off;"]
