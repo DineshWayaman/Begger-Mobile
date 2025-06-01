@@ -17,7 +17,7 @@ class VoiceChatService with ChangeNotifier {
   final Map<String, webrtc.RTCVideoRenderer> remoteRenderers = {};
 
   // Coturn server configuration
-  static const String _coturnIp = '65.2.83.124'; // Your EC2 public IP
+  static const String _coturnIp = '13.127.13.211'; // Your EC2 public IP
   static const String _turnSecret = 'begger5gr7yu5kusd5'; // From turnserver.conf (e.g., mysecurekey123)
 
   VoiceChatService(this._webSocketService, this.gameId, this.playerId) {
