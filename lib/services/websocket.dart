@@ -14,7 +14,7 @@ class WebSocketService with ChangeNotifier {
   void Function(String, int)? onTurnTimerStart; // Pass Timer: Callback for turn timer
 
   WebSocketService() {
-    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
+    socket = IO.io('https://playbeggar.online/', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
