@@ -279,24 +279,29 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Switch(
-                    value: isSinglePlayer,
-                    onChanged: (value) {
-                      setState(() {
-                        isSinglePlayer = value;
-                        if (isSinglePlayer) {
-                          _gameIdController.text = _generateGameId();
-                          // Shuffle names again when switching to single player
-                          final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
-                          botNameControllers = List.generate(
-                            botCount,
-                            (i) => TextEditingController(text: shuffledNames[i]),
-                          );
-                        }
-                      });
-                    },
-                    activeColor: Colors.amber.shade600,
-                    activeTrackColor: Colors.amber.shade200,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    onEnter: (_) => setState(() => _isHovered = true),
+                    onExit: (_) => setState(() => _isHovered = false),
+                    child: Switch(
+                      value: isSinglePlayer,
+                      onChanged: (value) {
+                        setState(() {
+                          isSinglePlayer = value;
+                          if (isSinglePlayer) {
+                            _gameIdController.text = _generateGameId();
+                            // Shuffle names again when switching to single player
+                            final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
+                            botNameControllers = List.generate(
+                              botCount,
+                              (i) => TextEditingController(text: shuffledNames[i]),
+                            );
+                          }
+                        });
+                      },
+                      activeColor: Colors.amber.shade600,
+                      activeTrackColor: Colors.amber.shade200,
+                    ),
                   ),
                 ),
                 Flexible(
@@ -381,11 +386,13 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
           controller: _playerNameController,
           hint: 'Your Name',
           isReadOnly: true,
+          fillColor: isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
         ),
         SizedBox(height: isLargeScreen ? 24 : 16),
         CustomTextField(
           controller: _gameIdController,
           hint: 'Game ID',
+          fillColor: isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
           // autoplay mode: Make game ID uneditable in single-player mode
           isReadOnly: isSinglePlayer,
           suffixIcon: !isSinglePlayer ? _buildCopyButton() : null,
@@ -458,68 +465,73 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                   ),
                 ),
 
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.remove, color: Colors.amber.shade800),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        onPressed: botCount > 2
-                            ? () {
-                                setState(() {
-                                  botCount--;
-                                  botNameControllers.removeLast();
-                                });
-                              }
-                            : null,
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          '$botCount',
-                          style: TextStyle(
-                            fontFamily: "Poppins",
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade900,
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onEnter: (_) => setState(() => _isHovered = true),
+                  onExit: (_) => setState(() => _isHovered = false),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.remove, color: Colors.amber.shade800),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
+                          onPressed: botCount > 2
+                              ? () {
+                                  setState(() {
+                                    botCount--;
+                                    botNameControllers.removeLast();
+                                  });
+                                }
+                              : null,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            '$botCount',
+                            style: TextStyle(
+                              fontFamily: "Poppins",
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.add, color: Colors.amber.shade800),
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(),
-                        onPressed: botCount < 5
-                            ? () {
-                                setState(() {
-                                  botCount++;
-                                  // Get a name that's not already used
-                                  final usedNames = botNameControllers
-                                      .map((c) => c.text)
-                                      .toList();
-                                  String newName = _botNameOptions.firstWhere(
-                                      (name) => !usedNames.contains(name),
-                                      orElse: () => 'Player ${botCount + 1}');
-                                  botNameControllers.add(
-                                    TextEditingController(text: newName),
-                                  );
-                                });
-                              }
-                            : null,
-                      ),
-                    ],
+                        IconButton(
+                          icon: Icon(Icons.add, color: Colors.amber.shade800),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
+                          onPressed: botCount < 5
+                              ? () {
+                                  setState(() {
+                                    botCount++;
+                                    // Get a name that's not already used
+                                    final usedNames = botNameControllers
+                                        .map((c) => c.text)
+                                        .toList();
+                                    String newName = _botNameOptions.firstWhere(
+                                        (name) => !usedNames.contains(name),
+                                        orElse: () => 'Player ${botCount + 1}');
+                                    botNameControllers.add(
+                                      TextEditingController(text: newName),
+                                    );
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -532,6 +544,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                   controller: botNameControllers[index],
                   hint: 'Opponent ${index + 1} Name',
                   isReadOnly: true,
+                  fillColor:Colors.amber.shade100,
                   // prefixIcon: Icon(Icons.person, color: Colors.amber.shade600),
                 ),
               );

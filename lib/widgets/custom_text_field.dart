@@ -5,6 +5,7 @@ class CustomTextField extends StatelessWidget {
   final String hint;
   final bool isReadOnly;
   final Widget? suffixIcon;
+  final Color? fillColor;
 
   const CustomTextField({
     super.key,
@@ -12,6 +13,7 @@ class CustomTextField extends StatelessWidget {
     required this.hint,
     required this.isReadOnly,
     this.suffixIcon,
+    this.fillColor,
   });
 
   @override
@@ -25,7 +27,7 @@ class CustomTextField extends StatelessWidget {
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey),
         filled: true,
-        fillColor: Colors.grey[200],
+        fillColor: fillColor,
         contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),

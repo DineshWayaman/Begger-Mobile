@@ -1,4 +1,5 @@
 import 'package:begger_card_game/screens/home_screen.dart';
+import 'package:begger_card_game/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/lobby.dart';
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
           selectionHandleColor: Colors.blue,
         ),
         ),
-        home: const HomeScreen(),
+        home: const SplashScreen(),
       ),
     );
   }
