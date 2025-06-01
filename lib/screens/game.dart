@@ -53,7 +53,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool _isReplayInitiator = false;
   VoiceChatService? _voiceChatService;
   AnimationController?
-      _timerController; // Pass Timer: Controller for turn timer animation
+  _timerController; // Pass Timer: Controller for turn timer animation
   String? _currentTurnPlayerId; // Pass Timer: Track current turn player
   double _timerProgress = 0.0; // Pass Timer: Track timer progress
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -80,10 +80,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(seconds: 40),
     )..addListener(() {
-        setState(() {
-          _timerProgress = _timerController!.value;
-        });
+      setState(() {
+        _timerProgress = _timerController!.value;
       });
+    });
     // Initialize voice chat only if not in single-player mode
     if (!widget.isSinglePlayer) {
       _initializeVoiceChat();
@@ -304,9 +304,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       final lastPlay = game.pile.last;
       final player = game.lastPlayedPlayerId != null
           ? game.players.firstWhere(
-              (p) => p.id == game.lastPlayedPlayerId,
-              orElse: () => Player(id: '', name: 'Unknown', hand: []),
-            )
+            (p) => p.id == game.lastPlayedPlayerId,
+        orElse: () => Player(id: '', name: 'Unknown', hand: []),
+      )
           : null;
 
       if (player != null && player.id != '' && player.id != widget.playerId) {
@@ -362,7 +362,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         titledPlayers.length == game.players.length &&
         game.status == 'finished') {
       final message =
-          titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
+      titledPlayers.map((p) => '${p.name}: ${p.title}').join('\n');
       if (!_shownMessages.contains(message)) {
         _shownMessages.add(message);
         _showGameSummaryScreen(message);
@@ -510,11 +510,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               '2'
                             ]
                                 .map((rank) => DropdownMenuItem(
-                                      value: rank,
-                                      child: Text(rank,
-                                          style:
-                                              TextStyle(fontFamily: "Poppins")),
-                                    ))
+                              value: rank,
+                              child: Text(rank,
+                                  style:
+                                  TextStyle(fontFamily: "Poppins")),
+                            ))
                                 .toList(),
                             onChanged: (value) =>
                                 setDialogState(() => selectedRank = value),
@@ -536,11 +536,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             value: selectedSuit,
                             items: ['hearts', 'diamonds', 'clubs', 'spades']
                                 .map((suit) => DropdownMenuItem(
-                                      value: suit,
-                                      child: Text(suit,
-                                          style:
-                                              TextStyle(fontFamily: "Poppins")),
-                                    ))
+                              value: suit,
+                              child: Text(suit,
+                                  style:
+                                  TextStyle(fontFamily: "Poppins")),
+                            ))
                                 .toList(),
                             onChanged: (value) =>
                                 setDialogState(() => selectedSuit = value),
@@ -562,19 +562,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               ),
                               ElevatedButton(
                                 onPressed:
-                                    selectedRank != null && selectedSuit != null
-                                        ? () {
-                                            Navigator.of(dialogContext).pop(
-                                              Cards(
-                                                isJoker: true,
-                                                suit: card.suit,
-                                                assignedRank: selectedRank,
-                                                assignedSuit: selectedSuit,
-                                                isDetails: false,
-                                              ),
-                                            );
-                                          }
-                                        : null,
+                                selectedRank != null && selectedSuit != null
+                                    ? () {
+                                  Navigator.of(dialogContext).pop(
+                                    Cards(
+                                      isJoker: true,
+                                      suit: card.suit,
+                                      assignedRank: selectedRank,
+                                      assignedSuit: selectedSuit,
+                                      isDetails: false,
+                                    ),
+                                  );
+                                }
+                                    : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blueAccent,
                                   shape: RoundedRectangleBorder(
@@ -632,9 +632,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final hasJoker = cards.any((c) => c.isJoker);
     final firstCard = cards[0];
     final effectiveRank =
-        firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
+    firstCard.isJoker ? firstCard.assignedRank : firstCard.rank;
     final effectiveSuit =
-        firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
+    firstCard.isJoker ? firstCard.assignedSuit : firstCard.suit;
 
     if (pattern == 'single') {
       if (firstCard.isDetails) return 'Details Card';
@@ -679,9 +679,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         });
       final startCard = sortedCards.first;
       final startRank =
-          startCard.isJoker ? startCard.assignedRank : startCard.rank;
+      startCard.isJoker ? startCard.assignedRank : startCard.rank;
       final startSuit =
-          startCard.isJoker ? startCard.assignedSuit : startCard.suit;
+      startCard.isJoker ? startCard.assignedSuit : startCard.suit;
       return hasJoker
           ? 'Joker Consecutive: Starting at $startRank of $startSuit'
           : 'Consecutive: Starting at $startRank of $startSuit';
@@ -1091,9 +1091,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         if (game == null) {
           return Scaffold(
             body: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: AssetImage('assets/images/beggarbg.png'),
+                    image: AssetImage(widget.isSinglePlayer
+                        ? 'assets/images/beggarbg2.png'
+                        : 'assets/images/beggarbg.png'),
                     fit: BoxFit.cover),
               ),
               child: const Center(
@@ -1111,7 +1113,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   return CupertinoAlertDialog(
                     title: const Text("Leave Game"),
                     content:
-                        const Text("Are you sure you want to exit the game?"),
+                    const Text("Are you sure you want to exit the game?"),
                     actions: <Widget>[
                       CupertinoDialogAction(
                         child: const Text(
@@ -1143,7 +1145,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   // Background Image
                   Positioned.fill(
                     child: Image.asset(
-                      'assets/images/beggarbg.png',
+                      widget.isSinglePlayer
+                          ? 'assets/images/beggarbg2.png'
+                          : 'assets/images/beggarbg.png',
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -1164,977 +1168,977 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         final isWeb = constraints.maxWidth > 1070;
                         return isWeb
                             ? Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth:
-                                        1200, // Maximum width for larger screens
-                                    minWidth:
-                                        300, // Minimum width for smaller screens
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxWidth:
+                              1200, // Maximum width for larger screens
+                              minWidth:
+                              300, // Minimum width for smaller screens
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 24),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(
+                                    0.8), // Optional: Background for contrast
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 24),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(
-                                          0.8), // Optional: Background for contrast
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            // Left side: Player count, Minimum players, Game ID
-                                            Expanded(
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(16.0),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const SizedBox(height: 20),
-                                                    // Header with leave button
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        const Text(
-                                                          'Waiting Room',
-                                                          style: TextStyle(
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            fontSize: 28,
-                                                            color: Colors.white,
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                            letterSpacing: 1.2,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 4),
-                                                        AnimatedDots(),
-                                                      ],
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.center,
+                                    children: [
+                                      // Left side: Player count, Minimum players, Game ID
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                          const EdgeInsets.all(16.0),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                            mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                            mainAxisSize:
+                                            MainAxisSize.min,
+                                            children: [
+                                              const SizedBox(height: 20),
+                                              // Header with leave button
+                                              Row(
+                                                mainAxisAlignment:
+                                                MainAxisAlignment
+                                                    .center,
+                                                children: [
+                                                  const Text(
+                                                    'Waiting Room',
+                                                    style: TextStyle(
+                                                      fontFamily:
+                                                      "Poppins",
+                                                      fontSize: 28,
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                      FontWeight.w700,
+                                                      letterSpacing: 1.2,
                                                     ),
-                                                    const SizedBox(height: 20),
-                                                    // Player count with circular progress
-                                                    Stack(
-                                                      alignment:
-                                                          Alignment.center,
-                                                      children: [
-                                                        SizedBox(
-                                                          width: 150,
-                                                          height: 150,
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                            value: (game.players
-                                                                        .length /
-                                                                    6)
-                                                                .clamp(
-                                                                    0.0, 1.0),
-                                                            strokeWidth: 10,
-                                                            backgroundColor:
-                                                                Colors.white
-                                                                    .withOpacity(
-                                                                        0.2),
-                                                            valueColor:
-                                                                AlwaysStoppedAnimation<
-                                                                        Color>(
-                                                                    Colors.amber
-                                                                        .shade600),
-                                                          ),
-                                                        ),
-                                                        Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Text(
-                                                              '${game.players.length}',
-                                                              style:
-                                                                  const TextStyle(
-                                                                fontFamily:
-                                                                    "Poppins",
-                                                                fontSize: 45,
-                                                                color: Colors
-                                                                    .white,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700,
-                                                                height: 1,
-                                                              ),
-                                                            ),
-                                                            const Text(
-                                                              '/6 Players',
-                                                              style: TextStyle(
-                                                                fontFamily:
-                                                                    "Poppins",
-                                                                fontSize: 16,
-                                                                color: Colors
-                                                                    .white70,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 20),
-                                                    // Minimum players indicator
-                                                    Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 8),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.black
-                                                            .withOpacity(0.3),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(20),
-                                                        border: Border.all(
-                                                            color: Colors.white
-                                                                .withOpacity(
-                                                                    0.1)),
-                                                      ),
-                                                      child: const Text(
-                                                        'Minimum 3 players required',
-                                                        style: TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          fontSize: 14,
-                                                          color: Colors.white70,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    // Game ID and Copy Game ID
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Text(
-                                                          'Game ID: ${widget.gameId}',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            fontSize: 16,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 8),
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            Clipboard.setData(
-                                                                ClipboardData(
-                                                                    text: widget
-                                                                        .gameId));
-                                                            // ScaffoldMessenger
-                                                            //         .of(context)
-                                                            //     .showSnackBar(
-                                                            //   SnackBar(
-                                                            //     content:
-                                                            //         const Text(
-                                                            //       'Game ID copied to clipboard',
-                                                            //       style: TextStyle(
-                                                            //           fontFamily:
-                                                            //               "Poppins"),
-                                                            //     ),
-                                                            //     backgroundColor:
-                                                            //         Colors
-                                                            //             .green,
-                                                            //   ),
-                                                            // );
-                                                            _showEnhancedSnackBar(
-                                                              message:
-                                                                  'Game ID copied to clipboard',
-                                                              icon: Icons
-                                                                  .content_copy,
-                                                              color: Colors
-                                                                  .green,
-                                                            );
-                                                          },
-                                                          child: const Icon(
-                                                              Icons.copy,
-                                                              color:
-                                                                  Colors.white,
-                                                              size: 20),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 20),
-                                                    // Rectangular Leave Button
-                                                    GestureDetector(
-                                                      onTap: () {
-                                                        showCupertinoDialog(
-                                                          context: context,
-                                                          builder: (BuildContext
-                                                              context) {
-                                                            return CupertinoAlertDialog(
-                                                              title: const Text(
-                                                                  "Leave Game"),
-                                                              content: const Text(
-                                                                  "Are you sure you want to leave the game?"),
-                                                              actions: <Widget>[
-                                                                CupertinoDialogAction(
-                                                                  child:
-                                                                      const Text(
-                                                                    "Cancel",
-                                                                    style:
-                                                                        TextStyle(
-                                                                      color: Colors
-                                                                          .blueAccent,
-                                                                    ),
-                                                                  ),
-                                                                  onPressed:
-                                                                      () {
-                                                                    Navigator.of(
-                                                                            context)
-                                                                        .pop();
-                                                                  },
-                                                                ),
-                                                                CupertinoDialogAction(
-                                                                  isDestructiveAction:
-                                                                      true,
-                                                                  child: const Text(
-                                                                      "Leave"),
-                                                                  onPressed:
-                                                                      () {
-                                                                    _handleLeaveGame();
-                                                                  },
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 12,
-                                                                horizontal: 24),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color:
-                                                              Colors.redAccent,
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(12),
-                                                        ),
-                                                        child: Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            const Icon(
-                                                              Icons.exit_to_app,
-                                                              color:
-                                                                  Colors.white,
-                                                              size: 20,
-                                                            ),
-                                                            const SizedBox(
-                                                                width: 8),
-                                                            const Text(
-                                                              'Leave Game',
-                                                              style: TextStyle(
-                                                                fontFamily:
-                                                                    "Poppins",
-                                                                fontSize: 16,
-                                                                color: Colors
-                                                                    .white,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 20),
-                                                  ],
-                                                ),
+                                                  ),
+                                                  const SizedBox(
+                                                      width: 4),
+                                                  AnimatedDots(),
+                                                ],
                                               ),
-                                            ),
-
-                                            // Right side: Players list, Action buttons, Voice chat
-                                            Expanded(
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(16.0),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const SizedBox(height: 50),
-                                                    // Players list
-                                                    ConstrainedBox(
-                                                      constraints:
-                                                          const BoxConstraints(
-                                                              maxHeight: 200),
-                                                      child: Container(
-                                                        width: double.infinity,
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(16),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.black
-                                                              .withOpacity(0.3),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(16),
+                                              const SizedBox(height: 20),
+                                              // Player count with circular progress
+                                              Stack(
+                                                alignment:
+                                                Alignment.center,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 150,
+                                                    height: 150,
+                                                    child:
+                                                    CircularProgressIndicator(
+                                                      value: (game.players
+                                                          .length /
+                                                          6)
+                                                          .clamp(
+                                                          0.0, 1.0),
+                                                      strokeWidth: 10,
+                                                      backgroundColor:
+                                                      Colors.white
+                                                          .withOpacity(
+                                                          0.2),
+                                                      valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                          Color>(
+                                                          Colors.amber
+                                                              .shade600),
+                                                    ),
+                                                  ),
+                                                  Column(
+                                                    mainAxisSize:
+                                                    MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        '${game.players.length}',
+                                                        style:
+                                                        const TextStyle(
+                                                          fontFamily:
+                                                          "Poppins",
+                                                          fontSize: 45,
+                                                          color: Colors
+                                                              .white,
+                                                          fontWeight:
+                                                          FontWeight
+                                                              .w700,
+                                                          height: 1,
                                                         ),
-                                                        child:
-                                                            game.players.isEmpty
-                                                                ? const Center(
-                                                                    child: Text(
-                                                                      'No players yet',
-                                                                      style:
-                                                                          TextStyle(
-                                                                        fontFamily:
-                                                                            "Poppins",
-                                                                        color: Colors
-                                                                            .white70,
-                                                                      ),
-                                                                    ),
-                                                                  )
-                                                                : ListView
-                                                                    .separated(
-                                                                    shrinkWrap:
-                                                                        true,
-                                                                    itemCount: game
-                                                                        .players
-                                                                        .length,
-                                                                    separatorBuilder:
-                                                                        (context,
-                                                                                index) =>
-                                                                            Divider(
-                                                                      color: Colors
-                                                                          .white
-                                                                          .withOpacity(
-                                                                              0.1),
-                                                                      height:
-                                                                          16,
-                                                                    ),
-                                                                    itemBuilder:
-                                                                        (context,
-                                                                            index) {
-                                                                      final player =
-                                                                          game.players[
-                                                                              index];
-                                                                      return Padding(
-                                                                        padding: const EdgeInsets
-                                                                            .symmetric(
-                                                                            vertical:
-                                                                                4),
-                                                                        child:
-                                                                            Row(
-                                                                          children: [
-                                                                            const Icon(
-                                                                              Icons.person_rounded,
-                                                                              color: Colors.white,
-                                                                              size: 25,
-                                                                            ),
-                                                                            const SizedBox(width: 4),
-                                                                            Text(
-                                                                              player.name,
-                                                                              style: const TextStyle(
-                                                                                fontFamily: "Poppins",
-                                                                                fontSize: 16,
-                                                                                color: Colors.white,
-                                                                                fontWeight: FontWeight.w500,
-                                                                              ),
-                                                                            ),
-                                                                          ],
-                                                                        ),
-                                                                      );
-                                                                    },
-                                                                  ),
                                                       ),
-                                                    ),
-                                                    const SizedBox(height: 30),
-                                                    // Action buttons
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Expanded(
-                                                          child: _GameButton(
-                                                            onPressed: game
-                                                                        .players
-                                                                        .length >=
-                                                                    3
-                                                                ? _handleStartGame
-                                                                : null,
-                                                            text: 'START GAME',
-                                                            icon: Icons
-                                                                .play_arrow_rounded,
-                                                            gradient:
-                                                                LinearGradient(
-                                                              colors: [
-                                                                Colors.amber
-                                                                    .shade600,
-                                                                Colors.amber
-                                                                    .shade800
-                                                              ],
-                                                            ),
-                                                            textColor:
-                                                                Colors.black,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 16),
-                                                        Expanded(
-                                                          child: _GameButton(
-                                                            onPressed:
-                                                                _shareGameInvite,
-                                                            text:
-                                                                'INVITE FRIENDS',
-                                                            icon: Icons
-                                                                .share_rounded,
-                                                            gradient:
-                                                                LinearGradient(
-                                                              colors: [
-                                                                Colors.blue
-                                                                    .shade600,
-                                                                Colors.blue
-                                                                    .shade800
-                                                              ],
-                                                            ),
-                                                            textColor:
-                                                                Colors.white,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    if (_voiceChatService !=
-                                                        null) ...[
-                                                      const SizedBox(
-                                                          height: 20),
-                                                      GestureDetector(
-                                                        onTap: () =>
-                                                            _voiceChatService!
-                                                                .toggleMute(),
-                                                        child: Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(12),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            shape:
-                                                                BoxShape.circle,
-                                                            color: _voiceChatService!
-                                                                    .isMuted
-                                                                ? Colors.red
-                                                                    .withOpacity(
-                                                                        0.7)
-                                                                : Colors.green
-                                                                    .withOpacity(
-                                                                        0.7),
-                                                          ),
-                                                          child: Icon(
-                                                            _voiceChatService!
-                                                                    .isMuted
-                                                                ? CupertinoIcons
-                                                                    .mic_slash_fill
-                                                                : CupertinoIcons
-                                                                    .mic_fill,
-                                                            color: Colors.white,
-                                                            size: 24,
-                                                          ),
+                                                      const Text(
+                                                        '/6 Players',
+                                                        style: TextStyle(
+                                                          fontFamily:
+                                                          "Poppins",
+                                                          fontSize: 16,
+                                                          color: Colors
+                                                              .white70,
                                                         ),
                                                       ),
                                                     ],
-                                                    if (_voiceChatService
-                                                            ?.remoteRenderers !=
-                                                        null)
-                                                      VoiceChatAudioRenderers(
-                                                          remoteRenderers:
-                                                              _voiceChatService!
-                                                                  .remoteRenderers),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              width: 100,
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : SingleChildScrollView(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Stack(
-                                    children: [
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth:
-                                              MediaQuery.of(context).size.width,
-                                          minHeight: MediaQuery.of(context)
-                                              .size
-                                              .height,
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          children: [
-                                            const SizedBox(height: 50),
-                                            // Header with leave button
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const Text(
-                                                  'Waiting Room',
-                                                  style: TextStyle(
-                                                    fontFamily: "Poppins",
-                                                    fontSize: 28,
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w700,
-                                                    letterSpacing: 1.2,
                                                   ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                AnimatedDots(),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 20),
-                                            // Player count with circular progress
-                                            Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                SizedBox(
-                                                  width: 150,
-                                                  height: 150,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    value:
-                                                        (game.players.length /
-                                                                6)
-                                                            .clamp(0.0, 1.0),
-                                                    strokeWidth: 10,
-                                                    backgroundColor: Colors
-                                                        .white
-                                                        .withOpacity(0.2),
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                                Color>(
-                                                            Colors.amber
-                                                                .shade600),
-                                                  ),
-                                                ),
-                                                Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      '${game.players.length}',
-                                                      style: const TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        fontSize: 45,
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        height: 1,
-                                                      ),
-                                                    ),
-                                                    const Text(
-                                                      '/6 Players',
-                                                      style: TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        fontSize: 16,
-                                                        color: Colors.white70,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 20),
-                                            // Minimum players indicator
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black
-                                                    .withOpacity(0.3),
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                                border: Border.all(
-                                                    color: Colors.white
-                                                        .withOpacity(0.1)),
+                                                ],
                                               ),
-                                              child: const Text(
-                                                'Minimum 3 players required',
-                                                style: TextStyle(
-                                                  fontFamily: "Poppins",
-                                                  fontSize: 14,
-                                                  color: Colors.white70,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            // Game ID and Copy Game ID
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  'Game ID: ${widget.gameId}',
-                                                  style: const TextStyle(
-                                                    fontFamily: "Poppins",
-                                                    fontSize: 16,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Clipboard.setData(
-                                                        ClipboardData(
-                                                            text:
-                                                                widget.gameId));
-                                                    // ScaffoldMessenger.of(
-                                                    //         context)
-                                                    //     .showSnackBar(
-                                                    //   SnackBar(
-                                                    //     content: const Text(
-                                                    //         'Game ID copied to clipboard',
-                                                    //         style: TextStyle(
-                                                    //             fontFamily:
-                                                    //                 "Poppins")),
-                                                    //     backgroundColor:
-                                                    //         Colors.green,
-                                                    //   ),
-                                                    // );
-                                                    _showEnhancedSnackBar(
-                                                      message:
-                                                          'Game ID copied to clipboard',
-                                                      icon: Icons.content_copy,
-                                                      color: Colors.green,
-                                                    );
-                                                  },
-                                                  child: const Icon(Icons.copy,
-                                                      color: Colors.white,
-                                                      size: 20),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 10),
-                                            // Players list
-                                            ConstrainedBox(
-                                              constraints: const BoxConstraints(
-                                                  maxHeight: 200),
-                                              child: Container(
-                                                width: double.infinity,
-                                                padding:
-                                                    const EdgeInsets.all(16),
+                                              const SizedBox(height: 20),
+                                              // Minimum players indicator
+                                              Container(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8),
                                                 decoration: BoxDecoration(
                                                   color: Colors.black
                                                       .withOpacity(0.3),
                                                   borderRadius:
-                                                      BorderRadius.circular(16),
+                                                  BorderRadius
+                                                      .circular(20),
+                                                  border: Border.all(
+                                                      color: Colors.white
+                                                          .withOpacity(
+                                                          0.1)),
                                                 ),
-                                                child: game.players.isEmpty
-                                                    ? const Center(
-                                                        child: Text(
-                                                          'No players yet',
-                                                          style: TextStyle(
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            color:
-                                                                Colors.white70,
-                                                          ),
-                                                        ),
-                                                      )
-                                                    : ListView.separated(
-                                                        shrinkWrap: true,
-                                                        itemCount:
-                                                            game.players.length,
-                                                        separatorBuilder:
-                                                            (context, index) =>
-                                                                Divider(
-                                                          color: Colors.white
-                                                              .withOpacity(0.1),
-                                                          height: 16,
-                                                        ),
-                                                        itemBuilder:
-                                                            (context, index) {
-                                                          final player = game
-                                                              .players[index];
-                                                          return Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    vertical:
-                                                                        4),
-                                                            child: Row(
-                                                              children: [
-                                                                const Icon(
-                                                                    Icons
-                                                                        .person_rounded,
-                                                                    color: Colors
-                                                                        .white,
-                                                                    size: 25),
-                                                                const SizedBox(
-                                                                    width: 4),
-                                                                Text(
-                                                                  player.name,
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    fontFamily:
-                                                                        "Poppins",
-                                                                    fontSize:
-                                                                        16,
-                                                                    color: Colors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
+                                                child: const Text(
+                                                  'Minimum 3 players required',
+                                                  style: TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    fontSize: 14,
+                                                    color: Colors.white70,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(height: 30),
-                                            // Action buttons
-                                            LayoutBuilder(
-                                              builder: (context, constraints) {
-                                                final isWeb =
-                                                    constraints.maxWidth > 600;
-                                                return isWeb
-                                                    ? Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          Expanded(
-                                                            child: _GameButton(
-                                                              onPressed: game
-                                                                          .players
-                                                                          .length >=
-                                                                      3
-                                                                  ? _handleStartGame
-                                                                  : null,
-                                                              text:
-                                                                  'START GAME',
-                                                              icon: Icons
-                                                                  .play_arrow_rounded,
-                                                              gradient:
-                                                                  LinearGradient(
-                                                                colors: [
-                                                                  Colors.amber
-                                                                      .shade600,
-                                                                  Colors.amber
-                                                                      .shade800
-                                                                ],
+                                              const SizedBox(height: 10),
+                                              // Game ID and Copy Game ID
+                                              Row(
+                                                mainAxisAlignment:
+                                                MainAxisAlignment
+                                                    .center,
+                                                children: [
+                                                  Text(
+                                                    'Game ID: ${widget.gameId}',
+                                                    style:
+                                                    const TextStyle(
+                                                      fontFamily:
+                                                      "Poppins",
+                                                      fontSize: 16,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                      width: 8),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      Clipboard.setData(
+                                                          ClipboardData(
+                                                              text: widget
+                                                                  .gameId));
+                                                      // ScaffoldMessenger
+                                                      //         .of(context)
+                                                      //     .showSnackBar(
+                                                      //   SnackBar(
+                                                      //     content:
+                                                      //         const Text(
+                                                      //       'Game ID copied to clipboard',
+                                                      //       style: TextStyle(
+                                                      //           fontFamily:
+                                                      //               "Poppins"),
+                                                      //     ),
+                                                      //     backgroundColor:
+                                                      //         Colors
+                                                      //             .green,
+                                                      //   ),
+                                                      // );
+                                                      _showEnhancedSnackBar(
+                                                        message:
+                                                        'Game ID copied to clipboard',
+                                                        icon: Icons
+                                                            .content_copy,
+                                                        color: Colors
+                                                            .green,
+                                                      );
+                                                    },
+                                                    child: const Icon(
+                                                        Icons.copy,
+                                                        color:
+                                                        Colors.white,
+                                                        size: 20),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 20),
+                                              // Rectangular Leave Button
+                                              GestureDetector(
+                                                onTap: () {
+                                                  showCupertinoDialog(
+                                                    context: context,
+                                                    builder: (BuildContext
+                                                    context) {
+                                                      return CupertinoAlertDialog(
+                                                        title: const Text(
+                                                            "Leave Game"),
+                                                        content: const Text(
+                                                            "Are you sure you want to leave the game?"),
+                                                        actions: <Widget>[
+                                                          CupertinoDialogAction(
+                                                            child:
+                                                            const Text(
+                                                              "Cancel",
+                                                              style:
+                                                              TextStyle(
+                                                                color: Colors
+                                                                    .blueAccent,
                                                               ),
-                                                              textColor:
-                                                                  Colors.black,
                                                             ),
+                                                            onPressed:
+                                                                () {
+                                                              Navigator.of(
+                                                                  context)
+                                                                  .pop();
+                                                            },
                                                           ),
-                                                          const SizedBox(
-                                                              width: 16),
-                                                          Expanded(
-                                                            child: _GameButton(
-                                                              onPressed:
-                                                                  _shareGameInvite,
-                                                              text:
-                                                                  'INVITE FRIENDS',
-                                                              icon: Icons
-                                                                  .share_rounded,
-                                                              gradient:
-                                                                  LinearGradient(
-                                                                colors: [
-                                                                  Colors.blue
-                                                                      .shade600,
-                                                                  Colors.blue
-                                                                      .shade800
-                                                                ],
-                                                              ),
-                                                              textColor:
-                                                                  Colors.white,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      )
-                                                    : Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          SizedBox(
-                                                            width:
-                                                                double.infinity,
-                                                            child: _GameButton(
-                                                              onPressed: game
-                                                                          .players
-                                                                          .length >=
-                                                                      3
-                                                                  ? _handleStartGame
-                                                                  : null,
-                                                              text:
-                                                                  'START GAME',
-                                                              icon: Icons
-                                                                  .play_arrow_rounded,
-                                                              gradient:
-                                                                  LinearGradient(
-                                                                colors: [
-                                                                  Colors.amber
-                                                                      .shade600,
-                                                                  Colors.amber
-                                                                      .shade800
-                                                                ],
-                                                              ),
-                                                              textColor:
-                                                                  Colors.black,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 16),
-                                                          SizedBox(
-                                                            width:
-                                                                double.infinity,
-                                                            child: _GameButton(
-                                                              onPressed:
-                                                                  _shareGameInvite,
-                                                              text:
-                                                                  'INVITE FRIENDS',
-                                                              icon: Icons
-                                                                  .share_rounded,
-                                                              gradient:
-                                                                  LinearGradient(
-                                                                colors: [
-                                                                  Colors.blue
-                                                                      .shade600,
-                                                                  Colors.blue
-                                                                      .shade800
-                                                                ],
-                                                              ),
-                                                              textColor:
-                                                                  Colors.white,
-                                                            ),
+                                                          CupertinoDialogAction(
+                                                            isDestructiveAction:
+                                                            true,
+                                                            child: const Text(
+                                                                "Leave"),
+                                                            onPressed:
+                                                                () {
+                                                              _handleLeaveGame();
+                                                            },
                                                           ),
                                                         ],
                                                       );
-                                              },
-                                            ),
-                                            if (_voiceChatService != null) ...[
-                                              const SizedBox(height: 20),
-                                              GestureDetector(
-                                                onTap: () => _voiceChatService!
-                                                    .toggleMute(),
+                                                    },
+                                                  );
+                                                },
                                                 child: Container(
                                                   padding:
-                                                      const EdgeInsets.all(12),
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: _voiceChatService!
-                                                            .isMuted
-                                                        ? Colors.red
-                                                            .withOpacity(0.7)
-                                                        : Colors.green
-                                                            .withOpacity(0.7),
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 24),
+                                                  decoration:
+                                                  BoxDecoration(
+                                                    color:
+                                                    Colors.redAccent,
+                                                    borderRadius:
+                                                    BorderRadius
+                                                        .circular(12),
                                                   ),
-                                                  child: Icon(
-                                                    _voiceChatService!.isMuted
-                                                        ? CupertinoIcons
-                                                            .mic_slash_fill
-                                                        : CupertinoIcons
-                                                            .mic_fill,
-                                                    color: Colors.white,
-                                                    size: 24,
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                    MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.exit_to_app,
+                                                        color:
+                                                        Colors.white,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(
+                                                          width: 8),
+                                                      const Text(
+                                                        'Leave Game',
+                                                        style: TextStyle(
+                                                          fontFamily:
+                                                          "Poppins",
+                                                          fontSize: 16,
+                                                          color: Colors
+                                                              .white,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ),
+                                              const SizedBox(height: 20),
                                             ],
-                                            if (_voiceChatService
-                                                ?.remoteRenderers !=
-                                                null)
-                                              VoiceChatAudioRenderers(
-                                                  remoteRenderers:
-                                                  _voiceChatService!
-                                                      .remoteRenderers),
-                                          ],
+                                          ),
                                         ),
                                       ),
-                                      Positioned(
-                                        top: 0,
-                                        left: 0,
-                                        child: LeaveButton(
-                                          onPressed: () {
-                                            showCupertinoDialog(
-                                              context: context,
-                                              builder: (BuildContext context) {
-                                                return CupertinoAlertDialog(
-                                                  title:
-                                                      const Text("Leave Game"),
-                                                  content: const Text(
-                                                      "Are you sure you want to Leave the game?"),
-                                                  actions: <Widget>[
-                                                    CupertinoDialogAction(
-                                                      child: const Text(
-                                                        "Cancel",
-                                                        style: TextStyle(
-                                                          color:
-                                                              Colors.blueAccent,
-                                                        ),
+
+                                      // Right side: Players list, Action buttons, Voice chat
+                                      Expanded(
+                                        child: Padding(
+                                          padding:
+                                          const EdgeInsets.all(16.0),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                            mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                            mainAxisSize:
+                                            MainAxisSize.min,
+                                            children: [
+                                              const SizedBox(height: 50),
+                                              // Players list
+                                              ConstrainedBox(
+                                                constraints:
+                                                const BoxConstraints(
+                                                    maxHeight: 200),
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  padding:
+                                                  const EdgeInsets
+                                                      .all(16),
+                                                  decoration:
+                                                  BoxDecoration(
+                                                    color: Colors.black
+                                                        .withOpacity(0.3),
+                                                    borderRadius:
+                                                    BorderRadius
+                                                        .circular(16),
+                                                  ),
+                                                  child:
+                                                  game.players.isEmpty
+                                                      ? const Center(
+                                                    child: Text(
+                                                      'No players yet',
+                                                      style:
+                                                      TextStyle(
+                                                        fontFamily:
+                                                        "Poppins",
+                                                        color: Colors
+                                                            .white70,
                                                       ),
-                                                      onPressed: () {
-                                                        Navigator.of(context)
-                                                            .pop();
-                                                      },
                                                     ),
-                                                    CupertinoDialogAction(
-                                                      isDestructiveAction: true,
-                                                      child:
-                                                          const Text("Leave"),
-                                                      onPressed: () {
-                                                        _handleLeaveGame();
-                                                      },
+                                                  )
+                                                      : ListView
+                                                      .separated(
+                                                    shrinkWrap:
+                                                    true,
+                                                    itemCount: game
+                                                        .players
+                                                        .length,
+                                                    separatorBuilder:
+                                                        (context,
+                                                        index) =>
+                                                        Divider(
+                                                          color: Colors
+                                                              .white
+                                                              .withOpacity(
+                                                              0.1),
+                                                          height:
+                                                          16,
+                                                        ),
+                                                    itemBuilder:
+                                                        (context,
+                                                        index) {
+                                                      final player =
+                                                      game.players[
+                                                      index];
+                                                      return Padding(
+                                                        padding: const EdgeInsets
+                                                            .symmetric(
+                                                            vertical:
+                                                            4),
+                                                        child:
+                                                        Row(
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.person_rounded,
+                                                              color: Colors.white,
+                                                              size: 25,
+                                                            ),
+                                                            const SizedBox(width: 4),
+                                                            Text(
+                                                              player.name,
+                                                              style: const TextStyle(
+                                                                fontFamily: "Poppins",
+                                                                fontSize: 16,
+                                                                color: Colors.white,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 30),
+                                              // Action buttons
+                                              Row(
+                                                mainAxisAlignment:
+                                                MainAxisAlignment
+                                                    .center,
+                                                children: [
+                                                  Expanded(
+                                                    child: _GameButton(
+                                                      onPressed: game
+                                                          .players
+                                                          .length >=
+                                                          3
+                                                          ? _handleStartGame
+                                                          : null,
+                                                      text: 'START GAME',
+                                                      icon: Icons
+                                                          .play_arrow_rounded,
+                                                      gradient:
+                                                      LinearGradient(
+                                                        colors: [
+                                                          Colors.amber
+                                                              .shade600,
+                                                          Colors.amber
+                                                              .shade800
+                                                        ],
+                                                      ),
+                                                      textColor:
+                                                      Colors.black,
                                                     ),
-                                                  ],
-                                                );
-                                              },
-                                            );
-                                          },
-                                          tooltip: 'Leave Game',
+                                                  ),
+                                                  const SizedBox(
+                                                      width: 16),
+                                                  Expanded(
+                                                    child: _GameButton(
+                                                      onPressed:
+                                                      _shareGameInvite,
+                                                      text:
+                                                      'INVITE FRIENDS',
+                                                      icon: Icons
+                                                          .share_rounded,
+                                                      gradient:
+                                                      LinearGradient(
+                                                        colors: [
+                                                          Colors.blue
+                                                              .shade600,
+                                                          Colors.blue
+                                                              .shade800
+                                                        ],
+                                                      ),
+                                                      textColor:
+                                                      Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (_voiceChatService !=
+                                                  null) ...[
+                                                const SizedBox(
+                                                    height: 20),
+                                                GestureDetector(
+                                                  onTap: () =>
+                                                      _voiceChatService!
+                                                          .toggleMute(),
+                                                  child: Container(
+                                                    padding:
+                                                    const EdgeInsets
+                                                        .all(12),
+                                                    decoration:
+                                                    BoxDecoration(
+                                                      shape:
+                                                      BoxShape.circle,
+                                                      color: _voiceChatService!
+                                                          .isMuted
+                                                          ? Colors.red
+                                                          .withOpacity(
+                                                          0.7)
+                                                          : Colors.green
+                                                          .withOpacity(
+                                                          0.7),
+                                                    ),
+                                                    child: Icon(
+                                                      _voiceChatService!
+                                                          .isMuted
+                                                          ? CupertinoIcons
+                                                          .mic_slash_fill
+                                                          : CupertinoIcons
+                                                          .mic_fill,
+                                                      color: Colors.white,
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                              if (_voiceChatService
+                                                  ?.remoteRenderers !=
+                                                  null)
+                                                VoiceChatAudioRenderers(
+                                                    remoteRenderers:
+                                                    _voiceChatService!
+                                                        .remoteRenderers),
+                                            ],
+                                          ),
                                         ),
+                                      ),
+                                      SizedBox(
+                                        width: 100,
                                       ),
                                     ],
                                   ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                            : SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Stack(
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                    MediaQuery.of(context).size.width,
+                                    minHeight: MediaQuery.of(context)
+                                        .size
+                                        .height,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 50),
+                                      // Header with leave button
+                                      Row(
+                                        mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            'Waiting Room',
+                                            style: TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 28,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 1.2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          AnimatedDots(),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 20),
+                                      // Player count with circular progress
+                                      Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 150,
+                                            height: 150,
+                                            child:
+                                            CircularProgressIndicator(
+                                              value:
+                                              (game.players.length /
+                                                  6)
+                                                  .clamp(0.0, 1.0),
+                                              strokeWidth: 10,
+                                              backgroundColor: Colors
+                                                  .white
+                                                  .withOpacity(0.2),
+                                              valueColor:
+                                              AlwaysStoppedAnimation<
+                                                  Color>(
+                                                  Colors.amber
+                                                      .shade600),
+                                            ),
+                                          ),
+                                          Column(
+                                            mainAxisSize:
+                                            MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '${game.players.length}',
+                                                style: const TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  fontSize: 45,
+                                                  color: Colors.white,
+                                                  fontWeight:
+                                                  FontWeight.w700,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                              const Text(
+                                                '/6 Players',
+                                                style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  fontSize: 16,
+                                                  color: Colors.white70,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 20),
+                                      // Minimum players indicator
+                                      Container(
+                                        padding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black
+                                              .withOpacity(0.3),
+                                          borderRadius:
+                                          BorderRadius.circular(20),
+                                          border: Border.all(
+                                              color: Colors.white
+                                                  .withOpacity(0.1)),
+                                        ),
+                                        child: const Text(
+                                          'Minimum 3 players required',
+                                          style: TextStyle(
+                                            fontFamily: "Poppins",
+                                            fontSize: 14,
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      // Game ID and Copy Game ID
+                                      Row(
+                                        mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Game ID: ${widget.gameId}',
+                                            style: const TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 16,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Clipboard.setData(
+                                                  ClipboardData(
+                                                      text:
+                                                      widget.gameId));
+                                              // ScaffoldMessenger.of(
+                                              //         context)
+                                              //     .showSnackBar(
+                                              //   SnackBar(
+                                              //     content: const Text(
+                                              //         'Game ID copied to clipboard',
+                                              //         style: TextStyle(
+                                              //             fontFamily:
+                                              //                 "Poppins")),
+                                              //     backgroundColor:
+                                              //         Colors.green,
+                                              //   ),
+                                              // );
+                                              _showEnhancedSnackBar(
+                                                message:
+                                                'Game ID copied to clipboard',
+                                                icon: Icons.content_copy,
+                                                color: Colors.green,
+                                              );
+                                            },
+                                            child: const Icon(Icons.copy,
+                                                color: Colors.white,
+                                                size: 20),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      // Players list
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                            maxHeight: 200),
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding:
+                                          const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black
+                                                .withOpacity(0.3),
+                                            borderRadius:
+                                            BorderRadius.circular(16),
+                                          ),
+                                          child: game.players.isEmpty
+                                              ? const Center(
+                                            child: Text(
+                                              'No players yet',
+                                              style: TextStyle(
+                                                fontFamily:
+                                                "Poppins",
+                                                color:
+                                                Colors.white70,
+                                              ),
+                                            ),
+                                          )
+                                              : ListView.separated(
+                                            shrinkWrap: true,
+                                            itemCount:
+                                            game.players.length,
+                                            separatorBuilder:
+                                                (context, index) =>
+                                                Divider(
+                                                  color: Colors.white
+                                                      .withOpacity(0.1),
+                                                  height: 16,
+                                                ),
+                                            itemBuilder:
+                                                (context, index) {
+                                              final player = game
+                                                  .players[index];
+                                              return Padding(
+                                                padding:
+                                                const EdgeInsets
+                                                    .symmetric(
+                                                    vertical:
+                                                    4),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                        Icons
+                                                            .person_rounded,
+                                                        color: Colors
+                                                            .white,
+                                                        size: 25),
+                                                    const SizedBox(
+                                                        width: 4),
+                                                    Text(
+                                                      player.name,
+                                                      style:
+                                                      const TextStyle(
+                                                        fontFamily:
+                                                        "Poppins",
+                                                        fontSize:
+                                                        16,
+                                                        color: Colors
+                                                            .white,
+                                                        fontWeight:
+                                                        FontWeight
+                                                            .w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 30),
+                                      // Action buttons
+                                      LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final isWeb =
+                                              constraints.maxWidth > 600;
+                                          return isWeb
+                                              ? Row(
+                                            mainAxisAlignment:
+                                            MainAxisAlignment
+                                                .center,
+                                            children: [
+                                              Expanded(
+                                                child: _GameButton(
+                                                  onPressed: game
+                                                      .players
+                                                      .length >=
+                                                      3
+                                                      ? _handleStartGame
+                                                      : null,
+                                                  text:
+                                                  'START GAME',
+                                                  icon: Icons
+                                                      .play_arrow_rounded,
+                                                  gradient:
+                                                  LinearGradient(
+                                                    colors: [
+                                                      Colors.amber
+                                                          .shade600,
+                                                      Colors.amber
+                                                          .shade800
+                                                    ],
+                                                  ),
+                                                  textColor:
+                                                  Colors.black,
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                  width: 16),
+                                              Expanded(
+                                                child: _GameButton(
+                                                  onPressed:
+                                                  _shareGameInvite,
+                                                  text:
+                                                  'INVITE FRIENDS',
+                                                  icon: Icons
+                                                      .share_rounded,
+                                                  gradient:
+                                                  LinearGradient(
+                                                    colors: [
+                                                      Colors.blue
+                                                          .shade600,
+                                                      Colors.blue
+                                                          .shade800
+                                                    ],
+                                                  ),
+                                                  textColor:
+                                                  Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                              : Column(
+                                            mainAxisSize:
+                                            MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width:
+                                                double.infinity,
+                                                child: _GameButton(
+                                                  onPressed: game
+                                                      .players
+                                                      .length >=
+                                                      3
+                                                      ? _handleStartGame
+                                                      : null,
+                                                  text:
+                                                  'START GAME',
+                                                  icon: Icons
+                                                      .play_arrow_rounded,
+                                                  gradient:
+                                                  LinearGradient(
+                                                    colors: [
+                                                      Colors.amber
+                                                          .shade600,
+                                                      Colors.amber
+                                                          .shade800
+                                                    ],
+                                                  ),
+                                                  textColor:
+                                                  Colors.black,
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                  height: 16),
+                                              SizedBox(
+                                                width:
+                                                double.infinity,
+                                                child: _GameButton(
+                                                  onPressed:
+                                                  _shareGameInvite,
+                                                  text:
+                                                  'INVITE FRIENDS',
+                                                  icon: Icons
+                                                      .share_rounded,
+                                                  gradient:
+                                                  LinearGradient(
+                                                    colors: [
+                                                      Colors.blue
+                                                          .shade600,
+                                                      Colors.blue
+                                                          .shade800
+                                                    ],
+                                                  ),
+                                                  textColor:
+                                                  Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                      if (_voiceChatService != null) ...[
+                                        const SizedBox(height: 20),
+                                        GestureDetector(
+                                          onTap: () => _voiceChatService!
+                                              .toggleMute(),
+                                          child: Container(
+                                            padding:
+                                            const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: _voiceChatService!
+                                                  .isMuted
+                                                  ? Colors.red
+                                                  .withOpacity(0.7)
+                                                  : Colors.green
+                                                  .withOpacity(0.7),
+                                            ),
+                                            child: Icon(
+                                              _voiceChatService!.isMuted
+                                                  ? CupertinoIcons
+                                                  .mic_slash_fill
+                                                  : CupertinoIcons
+                                                  .mic_fill,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (_voiceChatService
+                                          ?.remoteRenderers !=
+                                          null)
+                                        VoiceChatAudioRenderers(
+                                            remoteRenderers:
+                                            _voiceChatService!
+                                                .remoteRenderers),
+                                    ],
+                                  ),
                                 ),
-                              );
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  child: LeaveButton(
+                                    onPressed: () {
+                                      showCupertinoDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return CupertinoAlertDialog(
+                                            title:
+                                            const Text("Leave Game"),
+                                            content: const Text(
+                                                "Are you sure you want to Leave the game?"),
+                                            actions: <Widget>[
+                                              CupertinoDialogAction(
+                                                child: const Text(
+                                                  "Cancel",
+                                                  style: TextStyle(
+                                                    color:
+                                                    Colors.blueAccent,
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  Navigator.of(context)
+                                                      .pop();
+                                                },
+                                              ),
+                                              CupertinoDialogAction(
+                                                isDestructiveAction: true,
+                                                child:
+                                                const Text("Leave"),
+                                                onPressed: () {
+                                                  _handleLeaveGame();
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                    tooltip: 'Leave Game',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -2145,7 +2149,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         }
 
         final player = game.players.firstWhere(
-          (p) => p.id == widget.playerId,
+              (p) => p.id == widget.playerId,
           orElse: () {
             debugPrint('Player not found: ${widget.playerId}');
             return Player(id: widget.playerId, name: 'Unknown', hand: []);
@@ -2155,9 +2159,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         if (player.id == 'Unknown') {
           return Scaffold(
             body: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: AssetImage('assets/images/beggarbg.png'),
+                    image: AssetImage(widget.isSinglePlayer
+                        ? 'assets/images/beggarbg2.png'
+                        : 'assets/images/beggarbg.png'),
                     fit: BoxFit.cover),
               ),
               child: Center(
@@ -2225,7 +2231,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 return CupertinoAlertDialog(
                   title: const Text("Leave Game"),
                   content:
-                      const Text("Are you sure you want to exit the game?"),
+                  const Text("Are you sure you want to exit the game?"),
                   actions: <Widget>[
                     CupertinoDialogAction(
                       child: const Text(
@@ -2253,9 +2259,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           },
           child: Scaffold(
             body: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: AssetImage('assets/images/beggarbg.png'),
+                    image: AssetImage(widget.isSinglePlayer
+                        ? 'assets/images/beggarbg2.png'
+                        : 'assets/images/beggarbg.png'),
                     fit: BoxFit.cover),
               ),
               child: SafeArea(
@@ -2266,723 +2274,72 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         final isWeb = constraints.maxWidth > 850;
                         return isWeb
                             ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Left side: Pile, Players list, Turn indicator
-                                  Expanded(
-                                    flex: 3,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16.0, vertical: 10.0),
-                                      child: Column(
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            children: [
-                                              // LeaveButton(
-                                              //   onPressed: () {
-                                              //     showCupertinoDialog(
-                                              //       context: context,
-                                              //       builder:
-                                              //           (BuildContext context) {
-                                              //         return CupertinoAlertDialog(
-                                              //           title: const Text(
-                                              //               "Leave Game"),
-                                              //           content: const Text(
-                                              //               "Are you sure you want to Leave the game?"),
-                                              //           actions: <Widget>[
-                                              //             CupertinoDialogAction(
-                                              //               child: const Text(
-                                              //                 "Cancel",
-                                              //                 style: TextStyle(
-                                              //                   color: Colors
-                                              //                       .blueAccent,
-                                              //                 ),
-                                              //               ),
-                                              //               onPressed: () {
-                                              //                 Navigator.of(
-                                              //                         context)
-                                              //                     .pop();
-                                              //               },
-                                              //             ),
-                                              //             CupertinoDialogAction(
-                                              //               isDestructiveAction:
-                                              //                   true,
-                                              //               child: const Text(
-                                              //                   "Leave"),
-                                              //               onPressed: () {
-                                              //                 _handleLeaveGame();
-                                              //               },
-                                              //             ),
-                                              //           ],
-                                              //         );
-                                              //       },
-                                              //     );
-                                              //   },
-                                              //   tooltip: 'Leave Game',
-                                              // ),
-                                              GestureDetector(
-                                                onTap: () {
-                                                  showCupertinoDialog(
-                                                    context: context,
-                                                    builder:
-                                                        (BuildContext context) {
-                                                      return CupertinoAlertDialog(
-                                                        title: const Text(
-                                                            "Leave Game"),
-                                                        content: const Text(
-                                                            "Are you sure you want to Leave the game?"),
-                                                        actions: <Widget>[
-                                                          CupertinoDialogAction(
-                                                            child: const Text(
-                                                              "Cancel",
-                                                              style: TextStyle(
-                                                                color: Colors
-                                                                    .blueAccent,
-                                                              ),
-                                                            ),
-                                                            onPressed: () {
-                                                              Navigator.of(
-                                                                      context)
-                                                                  .pop();
-                                                            },
-                                                          ),
-                                                          CupertinoDialogAction(
-                                                            isDestructiveAction:
-                                                                true,
-                                                            child: const Text(
-                                                                "Leave"),
-                                                            onPressed: () {
-                                                              _handleLeaveGame();
-                                                            },
-                                                          ),
-                                                        ],
-                                                      );
-                                                    },
-                                                  );
-                                                },
-                                                child: Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.redAccent,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.exit_to_app,
-                                                        color: Colors.white,
-                                                        size: 30,
-                                                      ),
-                                                      const SizedBox(width: 5),
-                                                      Text(
-                                                        "Leave",
-                                                        style: const TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          color: Colors.white,
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        Colors.lightGreenAccent,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.games_outlined,
-                                                        color: Colors.black,
-                                                        size: 30,
-                                                      ),
-                                                      const SizedBox(width: 5),
-                                                      Text(
-                                                        'ID: ${widget.gameId}',
-                                                        style: const TextStyle(
-                                                          fontFamily: "Poppins",
-                                                          color: Colors.black,
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (game.isTestMode)
-                                            const Padding(
-                                              padding: EdgeInsets.all(8),
-                                              child: Text(
-                                                'Single Player Test: Play cards to test UI',
-                                                style: TextStyle(
-                                                  fontFamily: "Poppins",
-                                                  color: Colors.white70,
-                                                  fontStyle: FontStyle.italic,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                            ),
-                                          if (game.pile.isNotEmpty)
-                                            Padding(
-                                              padding: const EdgeInsets.all(8),
-                                              child: Text(
-                                                _getPatternMessage(
-                                                    game.pile.last,
-                                                    game.currentPattern),
-                                                style: const TextStyle(
-                                                  fontFamily: "Poppins",
-                                                  color: Colors.white70,
-                                                  fontStyle: FontStyle.italic,
-                                                  fontSize: 14,
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ),
-                                          const SizedBox(height: 5),
-                                          if (!game.isTestMode)
-                                            SizedBox(
-                                              height: 80,
-                                              child: ListView.builder(
-                                                scrollDirection:
-                                                    Axis.horizontal,
-                                                itemCount: game.players.length,
-                                                itemBuilder: (context, index) {
-                                                  final sortedPlayers = [
-                                                    ...game.players.where((p) =>
-                                                        p.id ==
-                                                        widget.playerId),
-                                                    ...game.players.where((p) =>
-                                                        p.id !=
-                                                        widget.playerId),
-                                                  ];
-                                                  final p =
-                                                      sortedPlayers[index];
-                                                  final isCurrentTurn = p.id ==
-                                                          _currentTurnPlayerId &&
-                                                      !game.isTestMode;
-                                                  return Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            right: 10,
-                                                            left: 5,
-                                                            top: 3,
-                                                            bottom: 2),
-                                                    child:
-                                                        GlowingPlayerContainer(
-                                                      player: p,
-                                                      isCurrentTurn:
-                                                          isCurrentTurn,
-                                                      timerProgress:
-                                                          isCurrentTurn
-                                                              ? _timerProgress
-                                                              : 0,
-                                                      currentTurnPlayerId: game
-                                                          .players[
-                                                              game.currentTurn]
-                                                          .id,
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          const SizedBox(height: 20),
-                                          Container(
-                                            height: 306.8,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.white.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: game.pile.isNotEmpty
-                                                ? ListView.builder(
-                                                    scrollDirection:
-                                                        Axis.horizontal,
-                                                    itemCount:
-                                                        game.pile.last.length,
-                                                    itemBuilder: (context, i) {
-                                                      final card =
-                                                          game.pile.last[i];
-                                                      return Tooltip(
-                                                          message: card.isJoker
-                                                              ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                                              : card.isDetails
-                                                                  ? 'Details Card'
-                                                                  : '${card.rank} of ${card.suit}',
-                                                          child: CardWidget(
-                                                            card: card,
-                                                          ));
-                                                    },
-                                                  )
-                                                : Center(
-                                                    child: Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        const Text(
-                                                          'No cards played',
-                                                          style: TextStyle(
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            color:
-                                                                Colors.white70,
-                                                            fontSize: 20,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 4),
-                                                        AnimatedEmoji(
-                                                          AnimatedEmojis.sad,
-                                                          size: 30,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            game.isTestMode
-                                                ? 'Test Mode: Your turn'
-                                                : (isMyTurn
-                                                    ? 'Your turn!'
-                                                    : '${game.players[game.currentTurn].name}\'s turn'),
-                                            style: TextStyle(
-                                              fontFamily: "Poppins",
-                                              color: isMyTurn
-                                                  ? Colors.greenAccent
-                                                  : Colors.redAccent,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                          Spacer(),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              Expanded(
-                                                child: AnimatedScaleButton(
-                                                  onPressed: canPass
-                                                      ? _handlePass
-                                                      : null,
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 10.0),
-                                                    child: const Text(
-                                                      'Pass',
-                                                      style: TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        fontSize: 20,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  tooltip: game.isTestMode
-                                                      ? 'Passing not allowed in test mode'
-                                                      : (game.pile.isEmpty &&
-                                                              game.passCount ==
-                                                                  0 &&
-                                                              player.hand
-                                                                  .isNotEmpty)
-                                                          ? 'Cannot Pass'
-                                                          : '',
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              if (_voiceChatService != null)
-                                                AnimatedScaleButton(
-                                                  onPressed: () =>
-                                                      _voiceChatService!
-                                                          .toggleMute(),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 10.0),
-                                                    child: Icon(
-                                                      _voiceChatService!.isMuted
-                                                          ? CupertinoIcons
-                                                              .mic_slash_fill
-                                                          : CupertinoIcons
-                                                              .mic_fill,
-                                                      color: Colors.white,
-                                                      size: 26,
-                                                    ),
-                                                  ),
-                                                  tooltip:
-                                                      _voiceChatService!.isMuted
-                                                          ? 'Unmute'
-                                                          : 'Mute',
-                                                ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: AnimatedScaleButton(
-                                                  onPressed: isMyTurn &&
-                                                          selectedCards
-                                                              .isNotEmpty
-                                                      ? () => _playCards(
-                                                          selectedCards)
-                                                      : null,
-                                                  child: Padding(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 10.0),
-                                                    child: const Text(
-                                                      'Play',
-                                                      style: TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        fontSize: 20,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  // Right side: Player's hand, Action buttons
-                                  Expanded(
-                                    flex: 2,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16.0, vertical: 10.0),
-                                      child: Column(
-                                        children: [
-                                          Expanded(
-                                            child: SingleChildScrollView(
-                                              controller: _scrollController,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 2.0),
-                                                child: LayoutBuilder(
-                                                  builder:
-                                                      (context, constraints) {
-                                                    return Stack(
-                                                      children: [
-                                                        Column(
-                                                          children: [
-                                                            Container(
-                                                              constraints:
-                                                                  BoxConstraints(
-                                                                      maxHeight:
-                                                                          constraints
-                                                                              .maxHeight),
-                                                              child: Padding(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .only(
-                                                                        top:
-                                                                            8.0,
-                                                                        right:
-                                                                            20),
-                                                                child: GridView
-                                                                    .builder(
-                                                                  physics:
-                                                                      const NeverScrollableScrollPhysics(),
-                                                                  shrinkWrap:
-                                                                      true,
-                                                                  itemCount:
-                                                                      player
-                                                                          .hand
-                                                                          .length,
-                                                                  gridDelegate:
-                                                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                                                    crossAxisCount:
-                                                                        4,
-                                                                    mainAxisSpacing:
-                                                                        4,
-                                                                    crossAxisSpacing:
-                                                                        4,
-                                                                    childAspectRatio:
-                                                                        1.20 /
-                                                                            1.75,
-                                                                  ),
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          index) {
-                                                                    final card =
-                                                                        player.hand[
-                                                                            index];
-                                                                    return DragTarget<
-                                                                        int>(
-                                                                      builder: (context,
-                                                                          candidateData,
-                                                                          rejectedData) {
-                                                                        return Draggable<
-                                                                            int>(
-                                                                          data:
-                                                                              index,
-                                                                          feedback:
-                                                                              Material(
-                                                                            type:
-                                                                                MaterialType.transparency,
-                                                                            elevation:
-                                                                                8,
-                                                                            child:
-                                                                                Container(
-                                                                              color: Colors.transparent,
-                                                                              height: 175,
-                                                                              width: 120,
-                                                                              child: CardWidget(
-                                                                                card: card,
-                                                                                isSelected: false,
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                          childWhenDragging:
-                                                                              Opacity(
-                                                                            opacity:
-                                                                                0.3,
-                                                                            child:
-                                                                                CardWidget(
-                                                                              card: card,
-                                                                              isSelected: selectedCards.contains(card),
-                                                                            ),
-                                                                          ),
-                                                                          child:
-                                                                              GestureDetector(
-                                                                            onLongPress:
-                                                                                () {
-                                                                              showDialog(
-                                                                                context: context,
-                                                                                barrierDismissible: true,
-                                                                                barrierColor: Colors.transparent,
-                                                                                builder: (context) => GestureDetector(
-                                                                                  onTap: () => Navigator.of(context).pop(),
-                                                                                  child: Dialog(
-                                                                                    backgroundColor: Colors.transparent,
-                                                                                    elevation: 0,
-                                                                                    insetPadding: EdgeInsets.zero,
-                                                                                    child: Stack(
-                                                                                      children: [
-                                                                                        BackdropFilter(
-                                                                                          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                                                                          child: Container(
-                                                                                            color: Colors.black.withOpacity(0.3),
-                                                                                          ),
-                                                                                        ),
-                                                                                        Center(
-                                                                                          child: GestureDetector(
-                                                                                            onTap: () {},
-                                                                                            child: SizedBox(
-                                                                                              height: 460,
-                                                                                              width: 310,
-                                                                                              child: CardWidget(
-                                                                                                card: card,
-                                                                                                isSelected: false,
-                                                                                              ),
-                                                                                            ),
-                                                                                          ),
-                                                                                        ),
-                                                                                      ],
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                              );
-                                                                            },
-                                                                            child:
-                                                                                AnimatedContainer(
-                                                                              duration: const Duration(milliseconds: 200),
-                                                                              transform: Matrix4.identity()
-                                                                                ..scale(selectedCards.contains(card) ? 1.1 : 1.0)
-                                                                                ..translate(0.0, selectedCards.contains(card) ? -10.0 : 0.0),
-                                                                              child: CardWidget(
-                                                                                card: card,
-                                                                                isSelected: selectedCards.contains(card),
-                                                                                cardHeight: double.infinity,
-                                                                                cardWidth: double.infinity,
-                                                                                onTap: isMyTurn
-                                                                                    ? () {
-                                                                                        setState(() {
-                                                                                          if (selectedCards.contains(card)) {
-                                                                                            selectedCards.remove(card);
-                                                                                          } else {
-                                                                                            selectedCards.add(card);
-                                                                                          }
-                                                                                          _updateScrollThumbVisibility();
-                                                                                        });
-                                                                                      }
-                                                                                    : null,
-                                                                              ),
-                                                                            ),
-                                                                          ),
-                                                                        );
-                                                                      },
-                                                                      onAccept:
-                                                                          (oldIndex) {
-                                                                        setState(
-                                                                            () {
-                                                                          final card = player
-                                                                              .hand
-                                                                              .removeAt(oldIndex);
-                                                                          player.hand.insert(
-                                                                              index,
-                                                                              card);
-                                                                          final currentHandIds = _lastSentHand
-                                                                              .map(_cardId)
-                                                                              .toList()
-                                                                            ..sort();
-                                                                          final newHandIds = player
-                                                                              .hand
-                                                                              .map(_cardId)
-                                                                              .toList()
-                                                                            ..sort();
-                                                                          if (currentHandIds !=
-                                                                              newHandIds) {
-                                                                            Provider.of<WebSocketService>(context, listen: false).updateHandOrder(
-                                                                                widget.gameId,
-                                                                                widget.playerId,
-                                                                                player.hand);
-                                                                            _lastSentHand =
-                                                                                List.from(player.hand);
-                                                                          }
-                                                                        });
-                                                                      },
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        if (_showScrollThumb)
-                                                          Positioned(
-                                                            right: 4,
-                                                            top: 0,
-                                                            bottom: 0,
-                                                            child: MouseRegion(
-                                                              cursor:
-                                                                  SystemMouseCursors
-                                                                      .click,
-                                                              child:
-                                                                  GestureDetector(
-                                                                onVerticalDragUpdate:
-                                                                    (details) {
-                                                                  final newOffset = _scrollController
-                                                                          .offset +
-                                                                      details.delta
-                                                                              .dy *
-                                                                          1.5;
-                                                                  _scrollController
-                                                                      .jumpTo(
-                                                                    newOffset.clamp(
-                                                                        0.0,
-                                                                        _scrollController
-                                                                            .position
-                                                                            .maxScrollExtent),
-                                                                  );
-                                                                },
-                                                                child:
-                                                                    Container(
-                                                                  width: 12,
-                                                                  margin: const EdgeInsets
-                                                                      .symmetric(
-                                                                      vertical:
-                                                                          8.0),
-                                                                  decoration:
-                                                                      BoxDecoration(
-                                                                    color: Colors
-                                                                        .white
-                                                                        .withOpacity(
-                                                                            0.7),
-                                                                    borderRadius:
-                                                                        BorderRadius
-                                                                            .circular(6),
-                                                                    boxShadow: [
-                                                                      BoxShadow(
-                                                                        color: Colors
-                                                                            .black
-                                                                            .withOpacity(0.2),
-                                                                        blurRadius:
-                                                                            4,
-                                                                        offset: const Offset(
-                                                                            0,
-                                                                            2),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  child:
-                                                                      const Center(
-                                                                    child: Icon(
-                                                                        Icons
-                                                                            .drag_handle,
-                                                                        color: Colors
-                                                                            .black54,
-                                                                        size:
-                                                                            10),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0),
-                                    child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left side: Pile, Players list, Turn indicator
+                            Expanded(
+                              flex: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 10.0),
+                                child: Column(
+                                  children: [
+                                    Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.start,
+                                      MainAxisAlignment.start,
                                       children: [
-                                        LeaveButton(
-                                          onPressed: () {
+                                        // LeaveButton(
+                                        //   onPressed: () {
+                                        //     showCupertinoDialog(
+                                        //       context: context,
+                                        //       builder:
+                                        //           (BuildContext context) {
+                                        //         return CupertinoAlertDialog(
+                                        //           title: const Text(
+                                        //               "Leave Game"),
+                                        //           content: const Text(
+                                        //               "Are you sure you want to Leave the game?"),
+                                        //           actions: <Widget>[
+                                        //             CupertinoDialogAction(
+                                        //               child: const Text(
+                                        //                 "Cancel",
+                                        //                 style: TextStyle(
+                                        //                   color: Colors
+                                        //                       .blueAccent,
+                                        //                 ),
+                                        //               ),
+                                        //               onPressed: () {
+                                        //                 Navigator.of(
+                                        //                         context)
+                                        //                     .pop();
+                                        //               },
+                                        //             ),
+                                        //             CupertinoDialogAction(
+                                        //               isDestructiveAction:
+                                        //                   true,
+                                        //               child: const Text(
+                                        //                   "Leave"),
+                                        //               onPressed: () {
+                                        //                 _handleLeaveGame();
+                                        //               },
+                                        //             ),
+                                        //           ],
+                                        //         );
+                                        //       },
+                                        //     );
+                                        //   },
+                                        //   tooltip: 'Leave Game',
+                                        // ),
+                                        GestureDetector(
+                                          onTap: () {
                                             showCupertinoDialog(
                                               context: context,
-                                              builder: (BuildContext context) {
+                                              builder:
+                                                  (BuildContext context) {
                                                 return CupertinoAlertDialog(
-                                                  title:
-                                                      const Text("Leave Game"),
+                                                  title: const Text(
+                                                      "Leave Game"),
                                                   content: const Text(
                                                       "Are you sure you want to Leave the game?"),
                                                   actions: <Widget>[
@@ -2990,19 +2347,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       child: const Text(
                                                         "Cancel",
                                                         style: TextStyle(
-                                                          color:
-                                                              Colors.blueAccent,
+                                                          color: Colors
+                                                              .blueAccent,
                                                         ),
                                                       ),
                                                       onPressed: () {
-                                                        Navigator.of(context)
+                                                        Navigator.of(
+                                                            context)
                                                             .pop();
                                                       },
                                                     ),
                                                     CupertinoDialogAction(
-                                                      isDestructiveAction: true,
-                                                      child:
-                                                          const Text("Leave"),
+                                                      isDestructiveAction:
+                                                      true,
+                                                      child: const Text(
+                                                          "Leave"),
                                                       onPressed: () {
                                                         _handleLeaveGame();
                                                       },
@@ -3012,17 +2371,53 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                               },
                                             );
                                           },
-                                          tooltip: 'Leave Game',
+                                          child: Container(
+                                            padding: const EdgeInsets
+                                                .symmetric(
+                                                horizontal: 8,
+                                                vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.redAccent,
+                                              borderRadius:
+                                              BorderRadius.circular(
+                                                  10),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.exit_to_app,
+                                                  color: Colors.white,
+                                                  size: 30,
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  "Leave",
+                                                  style: const TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                    FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
+
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 4),
+                                            padding: const EdgeInsets
+                                                .symmetric(
+                                                horizontal: 8,
+                                                vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: Colors.lightGreenAccent,
+                                              color:
+                                              Colors.lightGreenAccent,
                                               borderRadius:
-                                                  BorderRadius.circular(10),
+                                              BorderRadius.circular(
+                                                  10),
                                             ),
                                             child: Row(
                                               children: [
@@ -3038,7 +2433,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                     fontFamily: "Poppins",
                                                     color: Colors.black,
                                                     fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
+                                                    fontWeight:
+                                                    FontWeight.w500,
                                                   ),
                                                 ),
                                               ],
@@ -3047,504 +2443,1158 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  if (game.isTestMode)
-                                    const Padding(
-                                      padding: EdgeInsets.all(8),
-                                      child: Text(
-                                        'Single Player Test: Play cards to test UI',
-                                        style: TextStyle(
-                                          fontFamily: "Poppins",
-                                          color: Colors.white70,
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 16,
+                                    if (game.isTestMode)
+                                      const Padding(
+                                        padding: EdgeInsets.all(8),
+                                        child: Text(
+                                          'Single Player Test: Play cards to test UI',
+                                          style: TextStyle(
+                                            fontFamily: "Poppins",
+                                            color: Colors.white70,
+                                            fontStyle: FontStyle.italic,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  if (game.pile.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Text(
-                                        _getPatternMessage(game.pile.last,
-                                            game.currentPattern),
-                                        style: const TextStyle(
-                                          fontFamily: "Poppins",
-                                          color: Colors.white70,
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 14,
+                                    if (game.pile.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Text(
+                                          _getPatternMessage(
+                                              game.pile.last,
+                                              game.currentPattern),
+                                          style: const TextStyle(
+                                            fontFamily: "Poppins",
+                                            color: Colors.white70,
+                                            fontStyle: FontStyle.italic,
+                                            fontSize: 14,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                        textAlign: TextAlign.center,
                                       ),
-                                    ),
-                                  const SizedBox(height: 5),
-                                  if (!game.isTestMode)
-                                    SizedBox(
-                                      height: 80,
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: game.players.length,
-                                        itemBuilder: (context, index) {
-                                          final sortedPlayers = [
-                                            ...game.players.where(
-                                                (p) => p.id == widget.playerId),
-                                            ...game.players.where(
-                                                (p) => p.id != widget.playerId),
-                                          ];
-                                          final p = sortedPlayers[index];
-                                          final isCurrentTurn =
-                                              p.id == _currentTurnPlayerId &&
-                                                  !game.isTestMode;
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                                right: 10,
-                                                left: 5,
-                                                top: 3,
-                                                bottom: 2),
-                                            child: GlowingPlayerContainer(
-                                              player: p,
-                                              isCurrentTurn: isCurrentTurn,
-                                              timerProgress: isCurrentTurn
-                                                  ? _timerProgress
-                                                  : 0,
-                                              currentTurnPlayerId: game
-                                                  .players[game.currentTurn].id,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  const SizedBox(height: 20),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0),
-                                    child: Container(
-                                      height: 157,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: game.pile.isNotEmpty
-                                          ? ListView.builder(
-                                              scrollDirection: Axis.horizontal,
-                                              itemCount: game.pile.last.length,
-                                              itemBuilder: (context, i) {
-                                                final card = game.pile.last[i];
-                                                return Tooltip(
-                                                  message: card.isJoker
-                                                      ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
-                                                      : card.isDetails
-                                                          ? 'Details Card'
-                                                          : '${card.rank} of ${card.suit}',
-                                                  child: CardWidget(card: card),
-                                                );
-                                              },
-                                            )
-                                          : Center(
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  const Text(
-                                                    'No cards played',
-                                                    style: TextStyle(
-                                                      fontFamily: "Poppins",
-                                                      color: Colors.white70,
-                                                      fontSize: 20,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  AnimatedEmoji(
-                                                    AnimatedEmojis.sad,
-                                                    size: 30,
-                                                  ),
-                                                ],
+                                    const SizedBox(height: 5),
+                                    if (!game.isTestMode)
+                                      SizedBox(
+                                        height: 80,
+                                        child: ListView.builder(
+                                          scrollDirection:
+                                          Axis.horizontal,
+                                          itemCount: game.players.length,
+                                          itemBuilder: (context, index) {
+                                            final sortedPlayers = [
+                                              ...game.players.where((p) =>
+                                              p.id ==
+                                                  widget.playerId),
+                                              ...game.players.where((p) =>
+                                              p.id !=
+                                                  widget.playerId),
+                                            ];
+                                            final p =
+                                            sortedPlayers[index];
+                                            final isCurrentTurn = p.id ==
+                                                _currentTurnPlayerId &&
+                                                !game.isTestMode;
+                                            return Padding(
+                                              padding:
+                                              const EdgeInsets.only(
+                                                  right: 10,
+                                                  left: 5,
+                                                  top: 3,
+                                                  bottom: 2),
+                                              child:
+                                              GlowingPlayerContainer(
+                                                liquidGradient: widget.isSinglePlayer
+                                                    ? Colors.amberAccent.withOpacity(0.4)
+                                                    : Colors.blueAccent.withOpacity(0.4),
+                                                avatarBgColor: widget.isSinglePlayer
+                                                    ? Colors.amberAccent.withOpacity(0.3)
+                                                    : Colors.blueAccent.withOpacity(0.3),
+                                                pIconColor: widget.isSinglePlayer
+                                                    ? Colors.amberAccent
+                                                    : Colors.cyanAccent,
+                                                borderColor: isCurrentTurn ? widget.isSinglePlayer
+                                                    ? Colors.amberAccent
+                                                    :Colors.cyanAccent
+                                                    : Colors.white.withOpacity(0.1),
+                                                player: p,
+                                                isCurrentTurn:
+                                                isCurrentTurn,
+                                                timerProgress:
+                                                isCurrentTurn
+                                                    ? _timerProgress
+                                                    : 0,
+                                                currentTurnPlayerId: game
+                                                    .players[
+                                                game.currentTurn]
+                                                    .id,
                                               ),
-                                            ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    game.isTestMode
-                                        ? 'Test Mode: Your turn'
-                                        : (isMyTurn
-                                            ? 'Your turn!'
-                                            : '${game.players[game.currentTurn].name}\'s turn'),
-                                    style: TextStyle(
-                                      fontFamily: "Poppins",
-                                      color: isMyTurn
-                                          ? Colors.greenAccent
-                                          : Colors.redAccent,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      controller: _scrollController,
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8.0),
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return Stack(
-                                              children: [
-                                                Column(
-                                                  children: [
-                                                    Container(
-                                                      constraints: BoxConstraints(
-                                                          maxHeight: constraints
-                                                              .maxHeight),
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                top: 8.0,
-                                                                right: 20),
-                                                        child: GridView.builder(
-                                                          physics:
-                                                              const NeverScrollableScrollPhysics(),
-                                                          shrinkWrap: true,
-                                                          itemCount: player
-                                                              .hand.length,
-                                                          gridDelegate:
-                                                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                                            crossAxisCount: 4,
-                                                            mainAxisSpacing: 4,
-                                                            crossAxisSpacing: 4,
-                                                            childAspectRatio:
-                                                                3.07 / 4.4,
-                                                          ),
-                                                          itemBuilder:
-                                                              (context, index) {
-                                                            final card = player
-                                                                .hand[index];
-                                                            return DragTarget<
-                                                                int>(
-                                                              builder: (context,
-                                                                  candidateData,
-                                                                  rejectedData) {
-                                                                return Draggable<
-                                                                    int>(
-                                                                  data: index,
-                                                                  feedback:
-                                                                      Material(
-                                                                    type: MaterialType
-                                                                        .transparency,
-                                                                    elevation:
-                                                                        8,
-                                                                    child:
-                                                                        Container(
-                                                                      color: Colors
-                                                                          .transparent,
-                                                                      height:
-                                                                          175,
-                                                                      width:
-                                                                          120,
-                                                                      child: CardWidget(
-                                                                          card:
-                                                                              card,
-                                                                          isSelected:
-                                                                              false),
-                                                                    ),
-                                                                  ),
-                                                                  childWhenDragging:
-                                                                      Opacity(
-                                                                    opacity:
-                                                                        0.3,
-                                                                    child:
-                                                                        CardWidget(
-                                                                      card:
-                                                                          card,
-                                                                      isSelected:
-                                                                          selectedCards
-                                                                              .contains(card),
-                                                                    ),
-                                                                  ),
-                                                                  child:
-                                                                      GestureDetector(
-                                                                    onLongPress:
-                                                                        () {
-                                                                      showDialog(
-                                                                        context:
-                                                                            context,
-                                                                        barrierDismissible:
-                                                                            true,
-                                                                        barrierColor:
-                                                                            Colors.transparent,
-                                                                        builder:
-                                                                            (context) =>
-                                                                                GestureDetector(
-                                                                          onTap: () =>
-                                                                              Navigator.of(context).pop(),
-                                                                          child:
-                                                                              Dialog(
-                                                                            backgroundColor:
-                                                                                Colors.transparent,
-                                                                            elevation:
-                                                                                0,
-                                                                            insetPadding:
-                                                                                EdgeInsets.zero,
-                                                                            child:
-                                                                                Stack(
-                                                                              children: [
-                                                                                BackdropFilter(
-                                                                                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                                                                  child: Container(
-                                                                                    color: Colors.black.withOpacity(0.3),
-                                                                                  ),
-                                                                                ),
-                                                                                Center(
-                                                                                  child: GestureDetector(
-                                                                                    onTap: () {},
-                                                                                    child: SizedBox(
-                                                                                      height: 460,
-                                                                                      width: 310,
-                                                                                      child: CardWidget(
-                                                                                        card: card,
-                                                                                        isSelected: false,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                              ],
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                      );
-                                                                    },
-                                                                    child:
-                                                                        AnimatedContainer(
-                                                                      duration: const Duration(
-                                                                          milliseconds:
-                                                                              200),
-                                                                      transform: Matrix4
-                                                                          .identity()
-                                                                        ..scale(selectedCards.contains(card)
-                                                                            ? 1.1
-                                                                            : 1.0)
-                                                                        ..translate(
-                                                                            0.0,
-                                                                            selectedCards.contains(card)
-                                                                                ? -10.0
-                                                                                : 0.0),
-                                                                      child:
-                                                                          CardWidget(
-                                                                        card:
-                                                                            card,
-                                                                        isSelected:
-                                                                            selectedCards.contains(card),
-                                                                        cardWidth:
-                                                                            double.infinity,
-                                                                        cardHeight:
-                                                                            double.infinity,
-                                                                        onTap: isMyTurn
-                                                                            ? () {
-                                                                                setState(() {
-                                                                                  if (selectedCards.contains(card)) {
-                                                                                    selectedCards.remove(card);
-                                                                                  } else {
-                                                                                    selectedCards.add(card);
-                                                                                  }
-                                                                                  _updateScrollThumbVisibility();
-                                                                                });
-                                                                              }
-                                                                            : null,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                              },
-                                                              onAccept:
-                                                                  (oldIndex) {
-                                                                setState(() {
-                                                                  final card = player
-                                                                      .hand
-                                                                      .removeAt(
-                                                                          oldIndex);
-                                                                  player.hand
-                                                                      .insert(
-                                                                          index,
-                                                                          card);
-                                                                  final currentHandIds =
-                                                                      _lastSentHand
-                                                                          .map(
-                                                                              _cardId)
-                                                                          .toList()
-                                                                        ..sort();
-                                                                  final newHandIds = player
-                                                                      .hand
-                                                                      .map(
-                                                                          _cardId)
-                                                                      .toList()
-                                                                    ..sort();
-                                                                  if (currentHandIds !=
-                                                                      newHandIds) {
-                                                                    Provider.of<WebSocketService>(context, listen: false).updateHandOrder(
-                                                                        widget
-                                                                            .gameId,
-                                                                        widget
-                                                                            .playerId,
-                                                                        player
-                                                                            .hand);
-                                                                    _lastSentHand =
-                                                                        List.from(
-                                                                            player.hand);
-                                                                  }
-                                                                });
-                                                              },
-                                                            );
-                                                          },
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                if (_showScrollThumb)
-                                                  Positioned(
-                                                    right: 4,
-                                                    top: 0,
-                                                    bottom: 0,
-                                                    child: MouseRegion(
-                                                      cursor: SystemMouseCursors
-                                                          .click,
-                                                      child: GestureDetector(
-                                                        onVerticalDragUpdate:
-                                                            (details) {
-                                                          final newOffset =
-                                                              _scrollController
-                                                                      .offset +
-                                                                  details.delta
-                                                                          .dy *
-                                                                      1.5;
-                                                          _scrollController
-                                                              .jumpTo(
-                                                            newOffset.clamp(
-                                                                0.0,
-                                                                _scrollController
-                                                                    .position
-                                                                    .maxScrollExtent),
-                                                          );
-                                                        },
-                                                        child: Container(
-                                                          width: 12,
-                                                          margin:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  vertical:
-                                                                      8.0),
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: Colors.white
-                                                                .withOpacity(
-                                                                    0.7),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        6),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: Colors
-                                                                    .black
-                                                                    .withOpacity(
-                                                                        0.2),
-                                                                blurRadius: 4,
-                                                                offset:
-                                                                    const Offset(
-                                                                        0, 2),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          child: const Center(
-                                                            child: Icon(
-                                                                Icons
-                                                                    .drag_handle,
-                                                                color: Colors
-                                                                    .black54,
-                                                                size: 10),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
                                             );
                                           },
                                         ),
                                       ),
+                                    const SizedBox(height: 20),
+                                    Container(
+                                      height: 306.8,
+                                      decoration: BoxDecoration(
+                                        color:
+                                        Colors.white.withOpacity(0.1),
+                                        borderRadius:
+                                        BorderRadius.circular(12),
+                                      ),
+                                      child: game.pile.isNotEmpty
+                                          ? ListView.builder(
+                                        scrollDirection:
+                                        Axis.horizontal,
+                                        itemCount:
+                                        game.pile.last.length,
+                                        itemBuilder: (context, i) {
+                                          final card =
+                                          game.pile.last[i];
+                                          return Tooltip(
+                                              message: card.isJoker
+                                                  ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                                  : card.isDetails
+                                                  ? 'Details Card'
+                                                  : '${card.rank} of ${card.suit}',
+                                              child: CardWidget(
+                                                card: card,
+                                              ));
+                                        },
+                                      )
+                                          : Center(
+                                        child: Row(
+                                          mainAxisAlignment:
+                                          MainAxisAlignment
+                                              .center,
+                                          children: [
+                                            const Text(
+                                              'No cards played',
+                                              style: TextStyle(
+                                                fontFamily:
+                                                "Poppins",
+                                                color:
+                                                Colors.white70,
+                                                fontSize: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(
+                                                width: 4),
+                                            AnimatedEmoji(
+                                              AnimatedEmojis.sad,
+                                              size: 30,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0),
-                                    child: Row(
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      game.isTestMode
+                                          ? 'Test Mode: Your turn'
+                                          : (isMyTurn
+                                          ? 'Your turn!'
+                                          : '${game.players[game.currentTurn].name}\'s turn'),
+                                      style: TextStyle(
+                                        fontFamily: "Poppins",
+                                        color: isMyTurn
+                                            ? Colors.greenAccent
+                                            : (widget.isSinglePlayer
+                                            ? Colors.amber
+                                            : Colors.redAccent),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    Spacer(),
+                                    Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.spaceEvenly,
+                                      MainAxisAlignment.spaceEvenly,
                                       children: [
                                         Expanded(
                                           child: AnimatedScaleButton(
-                                            onPressed:
-                                                canPass ? _handlePass : null,
-                                            child: const Text(
-                                              'Pass',
-                                              style: TextStyle(
-                                                fontFamily: "Poppins",
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 16,
+                                            myBtnColor: Colors.amber,
+                                            onPressed: canPass
+                                                ? _handlePass
+                                                : null,
+                                            child: Padding(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                  vertical: 10.0),
+                                              child: const Text(
+                                                'Pass',
+                                                style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  color: Colors.white,
+                                                  fontWeight:
+                                                  FontWeight.w500,
+                                                  fontSize: 20,
+                                                ),
                                               ),
                                             ),
                                             tooltip: game.isTestMode
                                                 ? 'Passing not allowed in test mode'
                                                 : (game.pile.isEmpty &&
-                                                        game.passCount == 0 &&
-                                                        player.hand.isNotEmpty)
-                                                    ? 'Cannot pass as new round starter'
-                                                    : '',
+                                                game.passCount ==
+                                                    0 &&
+                                                player.hand
+                                                    .isNotEmpty)
+                                                ? 'Cannot Pass'
+                                                : '',
                                           ),
                                         ),
-                                        SizedBox(width: 4),
+                                        const SizedBox(width: 10),
                                         if (_voiceChatService != null)
                                           AnimatedScaleButton(
                                             onPressed: () =>
-                                                _voiceChatService!.toggleMute(),
-                                            child: Icon(
-                                              _voiceChatService!.isMuted
-                                                  ? CupertinoIcons
-                                                      .mic_slash_fill
-                                                  : CupertinoIcons.mic_fill,
-                                              color: Colors.white,
-                                              size: 22,
+                                                _voiceChatService!
+                                                    .toggleMute(),
+                                            child: Padding(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                  vertical: 10.0),
+                                              child: Icon(
+                                                _voiceChatService!.isMuted
+                                                    ? CupertinoIcons
+                                                    .mic_slash_fill
+                                                    : CupertinoIcons
+                                                    .mic_fill,
+                                                color: Colors.white,
+                                                size: 26,
+                                              ),
                                             ),
-                                            tooltip: _voiceChatService!.isMuted
+                                            tooltip:
+                                            _voiceChatService!.isMuted
                                                 ? 'Unmute'
                                                 : 'Mute',
                                           ),
-                                        SizedBox(width: 4),
+                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: AnimatedScaleButton(
+                                            myBtnColor: Colors.amber,
                                             onPressed: isMyTurn &&
-                                                    selectedCards.isNotEmpty
-                                                ? () =>
-                                                    _playCards(selectedCards)
+                                                selectedCards
+                                                    .isNotEmpty
+                                                ? () => _playCards(
+                                                selectedCards)
                                                 : null,
-                                            child: const Text(
-                                              'Play',
-                                              style: TextStyle(
-                                                fontFamily: "Poppins",
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 16,
+                                            child: Padding(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                  vertical: 10.0),
+                                              child: const Text(
+                                                'Play',
+                                                style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  color: Colors.white,
+                                                  fontWeight:
+                                                  FontWeight.w500,
+                                                  fontSize: 20,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Right side: Player's hand, Action buttons
+                            Expanded(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 10.0),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        controller: _scrollController,
+                                        child: Padding(
+                                          padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 2.0),
+                                          child: LayoutBuilder(
+                                            builder:
+                                                (context, constraints) {
+                                              return Stack(
+                                                children: [
+                                                  Column(
+                                                    children: [
+                                                      Container(
+                                                        constraints:
+                                                        BoxConstraints(
+                                                            maxHeight:
+                                                            constraints
+                                                                .maxHeight),
+                                                        child: Padding(
+                                                          padding:
+                                                          const EdgeInsets
+                                                              .only(
+                                                              top:
+                                                              8.0,
+                                                              right:
+                                                              20),
+                                                          child: GridView
+                                                              .builder(
+                                                            physics:
+                                                            const NeverScrollableScrollPhysics(),
+                                                            shrinkWrap:
+                                                            true,
+                                                            itemCount:
+                                                            player
+                                                                .hand
+                                                                .length,
+                                                            gridDelegate:
+                                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                                              crossAxisCount:
+                                                              4,
+                                                              mainAxisSpacing:
+                                                              4,
+                                                              crossAxisSpacing:
+                                                              4,
+                                                              childAspectRatio:
+                                                              1.20 /
+                                                                  1.75,
+                                                            ),
+                                                            itemBuilder:
+                                                                (context,
+                                                                index) {
+                                                              final card =
+                                                              player.hand[
+                                                              index];
+                                                              return DragTarget<
+                                                                  int>(
+                                                                builder: (context,
+                                                                    candidateData,
+                                                                    rejectedData) {
+                                                                  return Draggable<
+                                                                      int>(
+                                                                    data:
+                                                                    index,
+                                                                    feedback:
+                                                                    Material(
+                                                                      type:
+                                                                      MaterialType.transparency,
+                                                                      elevation:
+                                                                      8,
+                                                                      child:
+                                                                      Container(
+                                                                        color: Colors.transparent,
+                                                                        height: 175,
+                                                                        width: 120,
+                                                                        child: CardWidget(
+                                                                          card: card,
+                                                                          isSelected: false,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    childWhenDragging:
+                                                                    Opacity(
+                                                                      opacity:
+                                                                      0.3,
+                                                                      child:
+                                                                      CardWidget(
+                                                                        card: card,
+                                                                        isSelected: selectedCards.contains(card),
+                                                                      ),
+                                                                    ),
+                                                                    child:
+                                                                    GestureDetector(
+                                                                      onLongPress:
+                                                                          () {
+                                                                        showDialog(
+                                                                          context: context,
+                                                                          barrierDismissible: true,
+                                                                          barrierColor: Colors.transparent,
+                                                                          builder: (context) => GestureDetector(
+                                                                            onTap: () => Navigator.of(context).pop(),
+                                                                            child: Dialog(
+                                                                              backgroundColor: Colors.transparent,
+                                                                              elevation: 0,
+                                                                              insetPadding: EdgeInsets.zero,
+                                                                              child: Stack(
+                                                                                children: [
+                                                                                  BackdropFilter(
+                                                                                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                                                    child: Container(
+                                                                                      color: Colors.black.withOpacity(0.3),
+                                                                                    ),
+                                                                                  ),
+                                                                                  Center(
+                                                                                    child: GestureDetector(
+                                                                                      onTap: () {},
+                                                                                      child: SizedBox(
+                                                                                        height: 460,
+                                                                                        width: 310,
+                                                                                        child: CardWidget(
+                                                                                          card: card,
+                                                                                          isSelected: false,
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                      child:
+                                                                      AnimatedContainer(
+                                                                        duration: const Duration(milliseconds: 200),
+                                                                        transform: Matrix4.identity()
+                                                                          ..scale(selectedCards.contains(card) ? 1.1 : 1.0)
+                                                                          ..translate(0.0, selectedCards.contains(card) ? -10.0 : 0.0),
+                                                                        child: CardWidget(
+                                                                          card: card,
+                                                                          isSelected: selectedCards.contains(card),
+                                                                          cardHeight: double.infinity,
+                                                                          cardWidth: double.infinity,
+                                                                          onTap: isMyTurn
+                                                                              ? () {
+                                                                            setState(() {
+                                                                              if (selectedCards.contains(card)) {
+                                                                                selectedCards.remove(card);
+                                                                              } else {
+                                                                                selectedCards.add(card);
+                                                                              }
+                                                                              _updateScrollThumbVisibility();
+                                                                            });
+                                                                          }
+                                                                              : null,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                                onAccept:
+                                                                    (oldIndex) {
+                                                                  setState(
+                                                                          () {
+                                                                        final card = player
+                                                                            .hand
+                                                                            .removeAt(oldIndex);
+                                                                        player.hand.insert(
+                                                                            index,
+                                                                            card);
+                                                                        final currentHandIds = _lastSentHand
+                                                                            .map(_cardId)
+                                                                            .toList()
+                                                                          ..sort();
+                                                                        final newHandIds = player
+                                                                            .hand
+                                                                            .map(_cardId)
+                                                                            .toList()
+                                                                          ..sort();
+                                                                        if (currentHandIds !=
+                                                                            newHandIds) {
+                                                                          Provider.of<WebSocketService>(context, listen: false).updateHandOrder(
+                                                                              widget.gameId,
+                                                                              widget.playerId,
+                                                                              player.hand);
+                                                                          _lastSentHand =
+                                                                              List.from(player.hand);
+                                                                        }
+                                                                      });
+                                                                },
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  if (_showScrollThumb)
+                                                    Positioned(
+                                                      right: 4,
+                                                      top: 0,
+                                                      bottom: 0,
+                                                      child: MouseRegion(
+                                                        cursor:
+                                                        SystemMouseCursors
+                                                            .click,
+                                                        child:
+                                                        GestureDetector(
+                                                          onVerticalDragUpdate:
+                                                              (details) {
+                                                            final newOffset = _scrollController
+                                                                .offset +
+                                                                details.delta
+                                                                    .dy *
+                                                                    1.5;
+                                                            _scrollController
+                                                                .jumpTo(
+                                                              newOffset.clamp(
+                                                                  0.0,
+                                                                  _scrollController
+                                                                      .position
+                                                                      .maxScrollExtent),
+                                                            );
+                                                          },
+                                                          child:
+                                                          Container(
+                                                            width: 12,
+                                                            margin: const EdgeInsets
+                                                                .symmetric(
+                                                                vertical:
+                                                                8.0),
+                                                            decoration:
+                                                            BoxDecoration(
+                                                              color: Colors
+                                                                  .white
+                                                                  .withOpacity(
+                                                                  0.7),
+                                                              borderRadius:
+                                                              BorderRadius
+                                                                  .circular(6),
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: Colors
+                                                                      .black
+                                                                      .withOpacity(0.2),
+                                                                  blurRadius:
+                                                                  4,
+                                                                  offset: const Offset(
+                                                                      0,
+                                                                      2),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            child:
+                                                            const Center(
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .drag_handle,
+                                                                  color: Colors
+                                                                      .black54,
+                                                                  size:
+                                                                  10),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                            : Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                MainAxisAlignment.start,
+                                children: [
+                                  LeaveButton(
+                                    onPressed: () {
+                                      showCupertinoDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return CupertinoAlertDialog(
+                                            title:
+                                            const Text("Leave Game"),
+                                            content: const Text(
+                                                "Are you sure you want to Leave the game?"),
+                                            actions: <Widget>[
+                                              CupertinoDialogAction(
+                                                child: const Text(
+                                                  "Cancel",
+                                                  style: TextStyle(
+                                                    color:
+                                                    Colors.blueAccent,
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  Navigator.of(context)
+                                                      .pop();
+                                                },
+                                              ),
+                                              CupertinoDialogAction(
+                                                isDestructiveAction: true,
+                                                child:
+                                                const Text("Leave"),
+                                                onPressed: () {
+                                                  _handleLeaveGame();
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                    tooltip: 'Leave Game',
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.lightGreenAccent,
+                                        borderRadius:
+                                        BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.games_outlined,
+                                            color: Colors.black,
+                                            size: 30,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'ID: ${widget.gameId}',
+                                            style: const TextStyle(
+                                              fontFamily: "Poppins",
+                                              color: Colors.black,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ],
-                              );
+                              ),
+                            ),
+                            if (game.isTestMode)
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Single Player Test: Play cards to test UI',
+                                  style: TextStyle(
+                                    fontFamily: "Poppins",
+                                    color: Colors.white70,
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            if (game.pile.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Text(
+                                  _getPatternMessage(game.pile.last,
+                                      game.currentPattern),
+                                  style: const TextStyle(
+                                    fontFamily: "Poppins",
+                                    color: Colors.white70,
+                                    fontStyle: FontStyle.italic,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            const SizedBox(height: 5),
+                            if (!game.isTestMode)
+                              SizedBox(
+                                height: 80,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: game.players.length,
+                                  itemBuilder: (context, index) {
+                                    final sortedPlayers = [
+                                      ...game.players.where(
+                                              (p) => p.id == widget.playerId),
+                                      ...game.players.where(
+                                              (p) => p.id != widget.playerId),
+                                    ];
+                                    final p = sortedPlayers[index];
+                                    final isCurrentTurn =
+                                        p.id == _currentTurnPlayerId &&
+                                            !game.isTestMode;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: 10,
+                                          left: 5,
+                                          top: 3,
+                                          bottom: 2),
+                                      child: GlowingPlayerContainer(
+                                        liquidGradient: widget.isSinglePlayer
+                                            ? Colors.amberAccent.withOpacity(0.4)
+                                            : Colors.blueAccent.withOpacity(0.4),
+                                        avatarBgColor: widget.isSinglePlayer
+                                            ? Colors.amberAccent.withOpacity(0.3)
+                                            : Colors.blueAccent.withOpacity(0.3),
+                                        pIconColor: widget.isSinglePlayer
+                                            ? Colors.amberAccent
+                                            : Colors.cyanAccent,
+                                        borderColor: isCurrentTurn ? widget.isSinglePlayer
+                                            ? Colors.amberAccent
+                                            :Colors.cyanAccent
+                                            : Colors.white.withOpacity(0.1),
+                                        player: p,
+                                        isCurrentTurn: isCurrentTurn,
+                                        timerProgress: isCurrentTurn
+                                            ? _timerProgress
+                                            : 0,
+                                        currentTurnPlayerId: game
+                                            .players[game.currentTurn].id,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0),
+                              child: Container(
+                                height: 157,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: game.pile.isNotEmpty
+                                    ? ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: game.pile.last.length,
+                                  itemBuilder: (context, i) {
+                                    final card = game.pile.last[i];
+                                    return Tooltip(
+                                      message: card.isJoker
+                                          ? 'Joker: ${card.assignedRank} of ${card.assignedSuit}'
+                                          : card.isDetails
+                                          ? 'Details Card'
+                                          : '${card.rank} of ${card.suit}',
+                                      child: CardWidget(card: card),
+                                    );
+                                  },
+                                )
+                                    : Center(
+                                  child: Row(
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'No cards played',
+                                        style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          color: Colors.white70,
+                                          fontSize: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      AnimatedEmoji(
+                                        AnimatedEmojis.sad,
+                                        size: 30,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              game.isTestMode
+                                  ? 'Test Mode: Your turn'
+                                  : (isMyTurn
+                                  ? 'Your turn!'
+                                  : '${game.players[game.currentTurn].name}\'s turn'),
+                              style: TextStyle(
+                                fontFamily: "Poppins",
+                                color: isMyTurn
+                                    ? Colors.greenAccent
+                                    : (widget.isSinglePlayer
+                                    ? Colors.amber
+                                    : Colors.redAccent),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: _scrollController,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return Stack(
+                                        children: [
+                                          Column(
+                                            children: [
+                                              Container(
+                                                constraints: BoxConstraints(
+                                                    maxHeight: constraints
+                                                        .maxHeight),
+                                                child: Padding(
+                                                  padding:
+                                                  const EdgeInsets
+                                                      .only(
+                                                      top: 8.0,
+                                                      right: 20),
+                                                  child: GridView.builder(
+                                                    physics:
+                                                    const NeverScrollableScrollPhysics(),
+                                                    shrinkWrap: true,
+                                                    itemCount: player
+                                                        .hand.length,
+                                                    gridDelegate:
+                                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                                      crossAxisCount: 4,
+                                                      mainAxisSpacing: 4,
+                                                      crossAxisSpacing: 4,
+                                                      childAspectRatio:
+                                                      3.07 / 4.4,
+                                                    ),
+                                                    itemBuilder:
+                                                        (context, index) {
+                                                      final card = player
+                                                          .hand[index];
+                                                      return DragTarget<
+                                                          int>(
+                                                        builder: (context,
+                                                            candidateData,
+                                                            rejectedData) {
+                                                          return Draggable<
+                                                              int>(
+                                                            data: index,
+                                                            feedback:
+                                                            Material(
+                                                              type: MaterialType
+                                                                  .transparency,
+                                                              elevation:
+                                                              8,
+                                                              child:
+                                                              Container(
+                                                                color: Colors
+                                                                    .transparent,
+                                                                height:
+                                                                175,
+                                                                width:
+                                                                120,
+                                                                child: CardWidget(
+
+                                                                    card:
+                                                                    card,
+                                                                    isSelected:
+                                                                    false),
+                                                              ),
+                                                            ),
+                                                            childWhenDragging:
+                                                            Opacity(
+                                                              opacity:
+                                                              0.3,
+                                                              child:
+                                                              CardWidget(
+
+                                                                card:
+                                                                card,
+                                                                isSelected:
+                                                                selectedCards
+                                                                    .contains(card),
+                                                              ),
+                                                            ),
+                                                            child:
+                                                            GestureDetector(
+                                                              onLongPress:
+                                                                  () {
+                                                                showDialog(
+                                                                  context:
+                                                                  context,
+                                                                  barrierDismissible:
+                                                                  true,
+                                                                  barrierColor:
+                                                                  Colors.transparent,
+                                                                  builder:
+                                                                      (context) =>
+                                                                      GestureDetector(
+                                                                        onTap: () =>
+                                                                            Navigator.of(context).pop(),
+                                                                        child:
+                                                                        Dialog(
+                                                                          backgroundColor:
+                                                                          Colors.transparent,
+                                                                          elevation:
+                                                                          0,
+                                                                          insetPadding:
+                                                                          EdgeInsets.zero,
+                                                                          child:
+                                                                          Stack(
+                                                                            children: [
+                                                                              BackdropFilter(
+                                                                                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                                                                                child: Container(
+                                                                                  color: Colors.black.withOpacity(0.3),
+                                                                                ),
+                                                                              ),
+                                                                              Center(
+                                                                                child: GestureDetector(
+                                                                                  onTap: () {},
+                                                                                  child: SizedBox(
+                                                                                    height: 460,
+                                                                                    width: 310,
+                                                                                    child: CardWidget(
+                                                                                      card: card,
+                                                                                      isSelected: false,
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                );
+                                                              },
+                                                              child:
+                                                              AnimatedContainer(
+                                                                duration: const Duration(
+                                                                    milliseconds:
+                                                                    200),
+                                                                transform: Matrix4
+                                                                    .identity()
+                                                                  ..scale(selectedCards.contains(card)
+                                                                      ? 1.1
+                                                                      : 1.0)
+                                                                  ..translate(
+                                                                      0.0,
+                                                                      selectedCards.contains(card)
+                                                                          ? -10.0
+                                                                          : 0.0),
+                                                                child:
+                                                                CardWidget(
+                                                                  borderColor: widget.isSinglePlayer
+                                                                      ? Colors.amber
+                                                                      : Colors.blue,
+                                                                  selectedColor: widget.isSinglePlayer
+                                                                      ? Colors.amberAccent.withOpacity(0.3)
+                                                                      : Colors.blueAccent.withOpacity(0.3),
+                                                                  card:
+                                                                  card,
+                                                                  isSelected:
+                                                                  selectedCards.contains(card),
+                                                                  cardWidth:
+                                                                  double.infinity,
+                                                                  cardHeight:
+                                                                  double.infinity,
+                                                                  onTap: isMyTurn
+                                                                      ? () {
+                                                                    setState(() {
+                                                                      if (selectedCards.contains(card)) {
+                                                                        selectedCards.remove(card);
+                                                                      } else {
+                                                                        selectedCards.add(card);
+                                                                      }
+                                                                      _updateScrollThumbVisibility();
+                                                                    });
+                                                                  }
+                                                                      : null,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        onAccept:
+                                                            (oldIndex) {
+                                                          setState(() {
+                                                            final card = player
+                                                                .hand
+                                                                .removeAt(
+                                                                oldIndex);
+                                                            player.hand
+                                                                .insert(
+                                                                index,
+                                                                card);
+                                                            final currentHandIds =
+                                                            _lastSentHand
+                                                                .map(
+                                                                _cardId)
+                                                                .toList()
+                                                              ..sort();
+                                                            final newHandIds = player
+                                                                .hand
+                                                                .map(
+                                                                _cardId)
+                                                                .toList()
+                                                              ..sort();
+                                                            if (currentHandIds !=
+                                                                newHandIds) {
+                                                              Provider.of<WebSocketService>(context, listen: false).updateHandOrder(
+                                                                  widget
+                                                                      .gameId,
+                                                                  widget
+                                                                      .playerId,
+                                                                  player
+                                                                      .hand);
+                                                              _lastSentHand =
+                                                                  List.from(
+                                                                      player.hand);
+                                                            }
+                                                          });
+                                                        },
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (_showScrollThumb)
+                                            Positioned(
+                                              right: 4,
+                                              top: 0,
+                                              bottom: 0,
+                                              child: MouseRegion(
+                                                cursor: SystemMouseCursors
+                                                    .click,
+                                                child: GestureDetector(
+                                                  onVerticalDragUpdate:
+                                                      (details) {
+                                                    final newOffset =
+                                                        _scrollController
+                                                            .offset +
+                                                            details.delta
+                                                                .dy *
+                                                                1.5;
+                                                    _scrollController
+                                                        .jumpTo(
+                                                      newOffset.clamp(
+                                                          0.0,
+                                                          _scrollController
+                                                              .position
+                                                              .maxScrollExtent),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    width: 12,
+                                                    margin:
+                                                    const EdgeInsets
+                                                        .symmetric(
+                                                        vertical:
+                                                        8.0),
+                                                    decoration:
+                                                    BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(
+                                                          0.7),
+                                                      borderRadius:
+                                                      BorderRadius
+                                                          .circular(
+                                                          6),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors
+                                                              .black
+                                                              .withOpacity(
+                                                              0.2),
+                                                          blurRadius: 4,
+                                                          offset:
+                                                          const Offset(
+                                                              0, 2),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: const Center(
+                                                      child: Icon(
+                                                          Icons
+                                                              .drag_handle,
+                                                          color: Colors
+                                                              .black54,
+                                                          size: 10),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: AnimatedScaleButton(
+                                      myBtnColor: Colors.amber,
+                                      onPressed:
+                                      canPass ? _handlePass : null,
+                                      child: const Text(
+                                        'Pass',
+                                        style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      tooltip: game.isTestMode
+                                          ? 'Passing not allowed in test mode'
+                                          : (game.pile.isEmpty &&
+                                          game.passCount == 0 &&
+                                          player.hand.isNotEmpty)
+                                          ? 'Cannot pass as new round starter'
+                                          : '',
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  if (_voiceChatService != null)
+                                    AnimatedScaleButton(
+                                      onPressed: () =>
+                                          _voiceChatService!.toggleMute(),
+                                      child: Icon(
+                                        _voiceChatService!.isMuted
+                                            ? CupertinoIcons
+                                            .mic_slash_fill
+                                            : CupertinoIcons.mic_fill,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                      tooltip: _voiceChatService!.isMuted
+                                          ? 'Unmute'
+                                          : 'Mute',
+                                    ),
+                                  SizedBox(width: 4),
+                                  Expanded(
+                                    child: AnimatedScaleButton(
+                                      myBtnColor: Colors.amber,
+                                      onPressed: isMyTurn &&
+                                          selectedCards.isNotEmpty
+                                          ? () =>
+                                          _playCards(selectedCards)
+                                          : null,
+                                      child: const Text(
+                                        'Play',
+                                        style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        );
                       },
                     ),
                     if (_showNewRoundNotification && _newRoundMessage != null)
@@ -3598,12 +3648,20 @@ class GlowingPlayerContainer extends StatelessWidget {
   final bool isCurrentTurn;
   final double timerProgress;
   final String currentTurnPlayerId;
+  final Color borderColor;
+  final Color pIconColor;
+  final Color avatarBgColor;
+  final Color liquidGradient;
 
   const GlowingPlayerContainer({
     required this.player,
     required this.isCurrentTurn,
     required this.timerProgress,
     required this.currentTurnPlayerId,
+    required this.borderColor,
+    required this.pIconColor,
+    required this.avatarBgColor,
+    required this.liquidGradient,
     super.key,
   });
 
@@ -3615,8 +3673,8 @@ class GlowingPlayerContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
         border: Border.all(
-          color:
-              isCurrentTurn ? Colors.cyanAccent : Colors.white.withOpacity(0.1),
+          color: borderColor,
+          // isCurrentTurn ? borderColor ?? Colors.cyanAccent : Colors.white.withOpacity(0.1),
           width: isCurrentTurn ? 2.5 : 1,
         ),
         borderRadius: BorderRadius.circular(14),
@@ -3629,10 +3687,10 @@ class GlowingPlayerContainer extends StatelessWidget {
                 effects: [
                   ShimmerEffect(
                     duration: const Duration(seconds: 40),
-                    colors: [
-                      Colors.blueAccent.withOpacity(0.5),
-                      Colors.cyanAccent.withOpacity(0.7),
-                      Colors.blueAccent.withOpacity(0.5),
+                    colors:   [
+                      liquidGradient,
+                      liquidGradient.withOpacity(0.5),
+                      liquidGradient.withOpacity(0.3),
                     ],
                   ),
                 ],
@@ -3653,7 +3711,7 @@ class GlowingPlayerContainer extends StatelessWidget {
                       timerProgress, // Reverse progress for countdown effect
                   backgroundColor: Colors.transparent,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.cyanAccent.withOpacity(0.7),
+                    liquidGradient,
                   ),
                 ),
               ),
@@ -3664,7 +3722,7 @@ class GlowingPlayerContainer extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: Colors.blueAccent.withOpacity(0.3),
+                  backgroundColor: avatarBgColor,
                   child: Text(
                     player.name[0],
                     style: const TextStyle(
@@ -3709,7 +3767,7 @@ class GlowingPlayerContainer extends StatelessWidget {
                     iconType: IconType.continueAnimation,
                     height: 30,
                     width: 30,
-                    color: Colors.cyanAccent,
+                    color: pIconColor,
                     animateIcon: AnimateIcons.loading5,
                   ),
               ],
@@ -3719,14 +3777,14 @@ class GlowingPlayerContainer extends StatelessWidget {
       ),
     )
         .animate(
-          target: isCurrentTurn ? 1 : 0,
-        )
+      target: isCurrentTurn ? 1 : 0,
+    )
         .scaleXY(
-          begin: 0.97,
-          end: 1.03,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOut,
-        );
+      begin: 0.97,
+      end: 1.03,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOut,
+    );
   }
 }
 
@@ -3757,8 +3815,8 @@ class _GameButton extends StatelessWidget {
           gradient: onPressed != null
               ? gradient
               : LinearGradient(
-                  colors: [Colors.grey.shade600, Colors.grey.shade800],
-                ),
+            colors: [Colors.grey.shade600, Colors.grey.shade800],
+          ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             if (onPressed != null)
@@ -3799,12 +3857,14 @@ class AnimatedScaleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
   final String? tooltip;
+  final Color? myBtnColor;
 
   const AnimatedScaleButton({
     super.key,
     required this.onPressed,
     required this.child,
     this.tooltip,
+    this.myBtnColor,
   });
 
   @override
@@ -3815,9 +3875,9 @@ class AnimatedScaleButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: onPressed != null ? Colors.blueAccent : Colors.grey,
+          backgroundColor: onPressed != null ? myBtnColor?? Colors.blueAccent : Colors.grey,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           elevation: onPressed != null ? 4 : 0,
         ),
@@ -3827,9 +3887,9 @@ class AnimatedScaleButton extends StatelessWidget {
 
     return tooltip != null && tooltip!.isNotEmpty
         ? Tooltip(
-            message: tooltip!,
-            child: button,
-          )
+      message: tooltip!,
+      child: button,
+    )
         : button;
   }
 }
@@ -3855,7 +3915,7 @@ class AnimatedScaleDailogButton extends StatelessWidget {
           backgroundColor: Colors.white.withOpacity(0.2),
           foregroundColor: Colors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           elevation: 0,
           shadowColor: Colors.transparent,

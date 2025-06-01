@@ -48,7 +48,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
     super.initState();
     _playerNameController = TextEditingController(text: widget.playerName);
     _gameIdController.text = _generateGameId();
-    
+
     // Initialize bot name controllers with real names
     _initBotNameControllers();
 
@@ -91,7 +91,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
     final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
     botNameControllers = List.generate(
       3,
-      (i) => TextEditingController(text: shuffledNames[i]),
+          (i) => TextEditingController(text: shuffledNames[i]),
     );
   }
 
@@ -149,9 +149,12 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
           ),
           AnimatedContainer(
             duration: const Duration(milliseconds: 500),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/beggarbg.png'),
+                // image: AssetImage('assets/images/beggarbg.png'),
+                image: AssetImage(isSinglePlayer
+                    ? 'assets/images/beggarbg2.png'
+                    : 'assets/images/beggarbg.png'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -187,9 +190,9 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                             side: BorderSide(
-                              color: isSinglePlayer 
-                                ? Colors.amber.withOpacity(0.5) 
-                                : Colors.blue.shade300.withOpacity(0.5),
+                              color: isSinglePlayer
+                                  ? Colors.amber.withOpacity(0.5)
+                                  : Colors.blue.shade300.withOpacity(0.5),
                               width: 1.5,
                             ),
                           ),
@@ -294,7 +297,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                             final shuffledNames = List<String>.from(_botNameOptions)..shuffle();
                             botNameControllers = List.generate(
                               botCount,
-                              (i) => TextEditingController(text: shuffledNames[i]),
+                                  (i) => TextEditingController(text: shuffledNames[i]),
                             );
                           }
                         });
@@ -428,7 +431,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
       ],
     );
   }
-  
+
   // autoplay mode: Add bot settings UI
   List<Widget> _buildBotSettings(bool isLargeScreen) {
     return [
@@ -489,11 +492,11 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                           constraints: const BoxConstraints(),
                           onPressed: botCount > 2
                               ? () {
-                                  setState(() {
-                                    botCount--;
-                                    botNameControllers.removeLast();
-                                  });
-                                }
+                            setState(() {
+                              botCount--;
+                              botNameControllers.removeLast();
+                            });
+                          }
                               : null,
                         ),
                         Container(
@@ -514,20 +517,20 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                           constraints: const BoxConstraints(),
                           onPressed: botCount < 5
                               ? () {
-                                  setState(() {
-                                    botCount++;
-                                    // Get a name that's not already used
-                                    final usedNames = botNameControllers
-                                        .map((c) => c.text)
-                                        .toList();
-                                    String newName = _botNameOptions.firstWhere(
-                                        (name) => !usedNames.contains(name),
-                                        orElse: () => 'Player ${botCount + 1}');
-                                    botNameControllers.add(
-                                      TextEditingController(text: newName),
-                                    );
-                                  });
-                                }
+                            setState(() {
+                              botCount++;
+                              // Get a name that's not already used
+                              final usedNames = botNameControllers
+                                  .map((c) => c.text)
+                                  .toList();
+                              String newName = _botNameOptions.firstWhere(
+                                      (name) => !usedNames.contains(name),
+                                  orElse: () => 'Player ${botCount + 1}');
+                              botNameControllers.add(
+                                TextEditingController(text: newName),
+                              );
+                            });
+                          }
                               : null,
                         ),
                       ],
@@ -592,16 +595,16 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: isSinglePlayer 
-                      ? [Colors.amber.shade500, Colors.orange.shade700]
-                      : [Colors.blue.shade600, Colors.blue.shade900],
+                    colors: isSinglePlayer
+                        ? [Colors.amber.shade500, Colors.orange.shade700]
+                        : [Colors.blue.shade600, Colors.blue.shade900],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: isSinglePlayer 
-                        ? Colors.amber.shade200.withOpacity(0.5)
-                        : Colors.blue.shade200.withOpacity(0.5),
+                      color: isSinglePlayer
+                          ? Colors.amber.shade200.withOpacity(0.5)
+                          : Colors.blue.shade200.withOpacity(0.5),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),

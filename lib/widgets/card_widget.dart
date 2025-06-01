@@ -8,6 +8,8 @@ class CardWidget extends StatelessWidget {
   final bool isSelected;
   final double? cardWidth;
   final double? cardHeight;
+  final Color? selectedColor;
+  final Color? borderColor;
 
   const CardWidget({super.key,
     required this.card,
@@ -15,6 +17,8 @@ class CardWidget extends StatelessWidget {
     this.isSelected = false,
     this.cardWidth,
     this.cardHeight,
+    this.selectedColor,
+    this.borderColor,
   });
 
   @override
@@ -28,10 +32,10 @@ class CardWidget extends StatelessWidget {
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.black,
+            color: isSelected && borderColor != null ? borderColor! : Colors.black,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
               color: Colors.black26,
@@ -58,7 +62,7 @@ class CardWidget extends StatelessWidget {
               ),
               if (isSelected)
                 Container(
-                  color: Colors.blue.withOpacity(0.3),
+                  color: selectedColor,
                   child: const Center(
                     child: Icon(Icons.check, color: Colors.white, size: 30),
                   ),

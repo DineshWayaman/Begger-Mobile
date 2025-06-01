@@ -378,9 +378,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/images/internet.png',
+                SizedBox(
                   height: 100,
+                  child: AnimatedBuilder(
+                    animation: AnimationController(
+                      duration: const Duration(seconds: 2),
+                      vsync: this,
+                    )..repeat(),
+                    builder: (context, child) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            CupertinoIcons.wifi_slash,
+                            size: 50,
+                            color: CupertinoColors.systemRed,
+                          ),
+                          SizedBox(
+                            width: 70,
+                            height: 70,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                CupertinoColors.systemRed.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
                 const Text(
                   'Oops!',
@@ -422,7 +449,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   if (!mounted) return;
 
-                  isDeviceConnected = await InternetConnectionChecker.createInstance().hasConnection;
+                  isDeviceConnected =
+                  await InternetConnectionChecker.createInstance().hasConnection;
 
                   if (!isDeviceConnected && !isAlertSet) {
                     showCupertinoDialogBox();
