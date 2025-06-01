@@ -5,8 +5,7 @@ WORKDIR /app
 COPY . .
 
 RUN flutter pub get
-RUN flutter build web --release
-
+RUN flutter build web --release --base-href /gameplay/
 # Stage 2: Serve the app using NGINX
 FROM nginx:alpine
 
