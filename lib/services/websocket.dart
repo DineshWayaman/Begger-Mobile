@@ -15,6 +15,7 @@ class WebSocketService with ChangeNotifier {
 
   WebSocketService() {
     socket = IO.io('https://playbeggar.online/', <String, dynamic>{
+    // socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });

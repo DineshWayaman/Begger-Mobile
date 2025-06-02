@@ -2612,7 +2612,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                       children: [
                                         Expanded(
                                           child: AnimatedScaleButton(
-                                            myBtnColor: Colors.amber,
+                                            // myBtnColor: Colors.amber,
+                                            myBtnColor: widget.isSinglePlayer
+                                                ? Colors.amberAccent
+                                                : Colors.blueAccent,
                                             onPressed: canPass
                                                 ? _handlePass
                                                 : null,
@@ -2645,6 +2648,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                         const SizedBox(width: 10),
                                         if (_voiceChatService != null)
                                           AnimatedScaleButton(
+                                            myBtnColor: widget.isSinglePlayer
+                                                ? Colors.amberAccent
+                                                : Colors.blueAccent,
                                             onPressed: () =>
                                                 _voiceChatService!
                                                     .toggleMute(),
@@ -2670,7 +2676,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: AnimatedScaleButton(
-                                            myBtnColor: Colors.amber,
+                                            myBtnColor: widget.isSinglePlayer
+                                                ? Colors.amberAccent
+                                                : Colors.blueAccent,
                                             onPressed: isMyTurn &&
                                                 selectedCards
                                                     .isNotEmpty
@@ -2849,6 +2857,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                           ..scale(selectedCards.contains(card) ? 1.1 : 1.0)
                                                                           ..translate(0.0, selectedCards.contains(card) ? -10.0 : 0.0),
                                                                         child: CardWidget(
+                                                                          borderColor: widget.isSinglePlayer
+                                                                              ? Colors.amber
+                                                                              : Colors.blue,
+                                                                          selectedColor: widget.isSinglePlayer
+                                                                              ? Colors.amberAccent.withOpacity(0.3)
+                                                                              : Colors.blueAccent.withOpacity(0.3),
                                                                           card: card,
                                                                           isSelected: selectedCards.contains(card),
                                                                           cardHeight: double.infinity,
@@ -3531,7 +3545,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 children: [
                                   Expanded(
                                     child: AnimatedScaleButton(
-                                      myBtnColor: Colors.amber,
+                                      myBtnColor: widget.isSinglePlayer
+                                          ? Colors.amberAccent
+                                          : Colors.blueAccent,
                                       onPressed:
                                       canPass ? _handlePass : null,
                                       child: const Text(
@@ -3555,6 +3571,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   SizedBox(width: 4),
                                   if (_voiceChatService != null)
                                     AnimatedScaleButton(
+                                      myBtnColor: widget.isSinglePlayer
+                                          ? Colors.amberAccent
+                                          : Colors.blueAccent,
                                       onPressed: () =>
                                           _voiceChatService!.toggleMute(),
                                       child: Icon(
@@ -3572,7 +3591,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   SizedBox(width: 4),
                                   Expanded(
                                     child: AnimatedScaleButton(
-                                      myBtnColor: Colors.amber,
+                                      myBtnColor: widget.isSinglePlayer
+                                          ? Colors.amberAccent
+                                          : Colors.blueAccent,
                                       onPressed: isMyTurn &&
                                           selectedCards.isNotEmpty
                                           ? () =>
@@ -3857,14 +3878,14 @@ class AnimatedScaleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
   final String? tooltip;
-  final Color? myBtnColor;
+  final Color myBtnColor;
 
   const AnimatedScaleButton({
     super.key,
     required this.onPressed,
     required this.child,
     this.tooltip,
-    this.myBtnColor,
+    required this.myBtnColor,
   });
 
   @override
@@ -3875,7 +3896,8 @@ class AnimatedScaleButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: onPressed != null ? myBtnColor?? Colors.blueAccent : Colors.grey,
+          backgroundColor: onPressed != null ? myBtnColor : Colors.grey,
+              // Colors.blueAccent : Colors.grey,
           shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
