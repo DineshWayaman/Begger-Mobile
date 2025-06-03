@@ -9,14 +9,17 @@ import 'package:begger_card_game/screens/home_screen.dart';
 import 'package:begger_card_game/widgets/floating_particles.dart';
 import 'package:begger_card_game/widgets/leave_button.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import '../models/game.dart';
 import '../models/card.dart';
+import '../services/ad_helper.dart';
 import '../services/voice_chat_audio_renderers.dart';
 import '../services/websocket.dart';
 import '../services/voice_chat_service.dart';
@@ -58,6 +61,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   double _timerProgress = 0.0; // Pass Timer: Track timer progress
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRestarting = false;
+  bool  _isVideoAdLoaded = false;
 
   @override
   void initState() {
@@ -174,7 +178,56 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
     _audioPlayer.setSource(AssetSource('sounds/suffel.mp3'));
     _audioPlayer.setSource(AssetSource('sounds/play.mp3'));
+    _loadInterstitialAd();
   }
+
+  void _loadInterstitialAd() {
+    UnityAds.load(
+      placementId: AdHelper.interstitialAdUnitId,
+      onComplete: (placementId) {
+        setState(() {
+          _isVideoAdLoaded = true;
+        });
+        print('Video Ad Loaded: $placementId');
+      },
+      onFailed: (placementId, error, message) {
+        print('Video Ad Load Failed: $error $message');
+        setState(() {
+          _isVideoAdLoaded = false;
+        });
+
+      },
+    );
+  }
+
+  void _showInterstitialAd() {
+    if (_isVideoAdLoaded && !kIsWeb) {
+      UnityAds.showVideoAd(
+        placementId: AdHelper.interstitialAdUnitId,
+        onStart: (placementId) => print('Video Ad Started: $placementId'),
+        onClick: (placementId) => print('Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) => print('Video Ad Skipped: $placementId'),
+        onComplete: (placementId) {
+          print('Video Ad Completed: $placementId');
+          // Reward the player (e.g., add in-game currency)
+          setState(() {
+            _isVideoAdLoaded = false;
+          });
+          // Reload ad for next use
+          UnityAds.load(
+            placementId: AdHelper.interstitialAdUnitId,
+            onComplete: (placementId) => setState(() => _isVideoAdLoaded = true),
+            onFailed: (placementId, error, message) =>
+                print('Video Ad Reload Failed: $error $message'),
+          );
+        },
+        onFailed: (placementId, error, message) =>
+            print('Video Ad Show Failed: $error $message'),
+      );
+    }
+  }
+
+
 
   Future<void> _initializeVoiceChat() async {
     // Only initialize voice chat if not in single-player mode
@@ -216,6 +269,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (!widget.isSinglePlayer) {
       _voiceChatService?.dispose();
     }
+    _showInterstitialAd();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -382,6 +436,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context,
         MaterialPageRoute(
           builder: (context) => GameSummaryScreen(
+            isSinglePlayer: widget.isSinglePlayer,
             summaryMessage: message,
             gameId: widget.gameId,
             playerId: widget.playerId,
@@ -2092,6 +2147,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                     ],
                                   ),
                                 ),
+
                                 Positioned(
                                   top: 0,
                                   left: 0,
@@ -2141,6 +2197,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         );
                       },
                     ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: !kIsWeb
+                        ? UnityBannerAd(
+                      placementId: AdHelper.bannerAdUnitId,
+                      onLoad: (placementId) => print('Banner loaded: $placementId'),
+                      onClick: (placementId) => print('Banner clicked: $placementId'),
+                      onShown: (placementId) => print('Banner shown: $placementId'),
+                      onFailed: (placementId, error, message) =>
+                          print('Banner failed: $error $message'),
+                    )
+                        : null,
                   ),
                 ],
               ),
@@ -3613,7 +3682,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: !kIsWeb
+                                  ? UnityBannerAd(
+                                placementId: AdHelper.bannerAdUnitId,
+                                onLoad: (placementId) => print('Banner loaded: $placementId'),
+                                onClick: (placementId) => print('Banner clicked: $placementId'),
+                                onShown: (placementId) => print('Banner shown: $placementId'),
+                                onFailed: (placementId, error, message) =>
+                                    print('Banner failed: $error $message'),
+                              )
+                                  : null,
+                            ),
                           ],
                         );
                       },
@@ -3967,6 +4049,9 @@ class _AnimatedDotsState extends State<AnimatedDots>
       duration: Duration(milliseconds: 1000),
     )..repeat();
   }
+
+
+
 
   @override
   void dispose() {

@@ -13,8 +13,10 @@ import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:universal_html/html.dart' as html;
+import '../services/ad_helper.dart';
 import '../services/websocket.dart';
 
 class GameSummaryScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class GameSummaryScreen extends StatefulWidget {
   final String playerId;
   final VoidCallback onHomePressed;
   final VoidCallback onReplayPressed;
+  final bool isSinglePlayer;
 
   const GameSummaryScreen({
     super.key,
@@ -31,6 +34,7 @@ class GameSummaryScreen extends StatefulWidget {
     required this.playerId,
     required this.onHomePressed,
     required this.onReplayPressed,
+    required this.isSinglePlayer,
   });
 
   @override
@@ -44,6 +48,9 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   bool _isRestartEnabled = true;
   bool _isLoading = false;
   bool _isHovered = false;
+  bool _isRewardVideoAdLoaded = false;
+  bool _isVideoAdLoaded = false;
+  bool _isShareRewardVideoAdLoaded = false;
 
   // Animation controllers
   late AnimationController _animationController;
@@ -56,6 +63,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     super.initState();
     _setupAnimations();
     _setupWebSocketListeners();
+    _loadAdsWithRetry();
   }
 
   void _setupAnimations() {
@@ -128,8 +136,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
       }
 
       // Fallback to RenderRepaintBoundary
-      final boundary = _screenshotKey.currentContext?.findRenderObject()
-      as RenderRepaintBoundary?;
+      final boundary = _screenshotKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary != null) {
         final image = await boundary.toImage(pixelRatio: 3.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -141,6 +148,217 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
       setState(() => _isLoading = false);
     }
     return null;
+  }
+
+ Future<void> _loadAdsWithRetry({int maxRetries = 3, Duration retryDelay = const Duration(seconds: 2)}) async {
+   await Future.wait([
+     _loadRewardAdWithRetry(maxRetries, retryDelay),
+     _loadShareRewardAdWithRetry(maxRetries, retryDelay),
+     Future(() => _loadInterstitialAd()),
+   ]);
+ }
+
+  Future<void> _loadRewardAdWithRetry(int maxRetries, Duration retryDelay) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await UnityAds.load(
+          placementId: AdHelper.rewardedAdUnitId,
+          onComplete: (placementId) {
+            setState(() {
+              _isRewardVideoAdLoaded = true;
+            });
+            print('Reward Video Ad Loaded: $placementId');
+          },
+          onFailed: (placementId, error, message) {
+            print('Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+            setState(() {
+              _isRewardVideoAdLoaded = false;
+            });
+          },
+        );
+        if (_isRewardVideoAdLoaded) break;
+        if (attempt < maxRetries) await Future.delayed(retryDelay);
+      } catch (e) {
+        print('Reward Ad Load Error (Attempt $attempt): $e');
+      }
+    }
+    // if (!_isRewardVideoAdLoaded && mounted) {
+    //   _showEnhancedSnackBar(
+    //     message: 'Reward ad unavailable, save will proceed without ad.',
+    //     icon: Icons.info_outline,
+    //     color: Colors.blue,
+    //   );
+    // }
+  }
+
+  Future<void> _loadShareRewardAdWithRetry(int maxRetries, Duration retryDelay) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await UnityAds.load(
+          placementId: AdHelper.rewardedAdUnitId,
+          onComplete: (placementId) {
+            setState(() {
+              _isShareRewardVideoAdLoaded = true;
+            });
+            print('Share Reward Video Ad Loaded: $placementId');
+          },
+          onFailed: (placementId, error, message) {
+            print('Share Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+            setState(() {
+              _isShareRewardVideoAdLoaded = false;
+            });
+          },
+        );
+        if (_isShareRewardVideoAdLoaded) break;
+        if (attempt < maxRetries) await Future.delayed(retryDelay);
+      } catch (e) {
+        print('Share Reward Ad Load Error (Attempt $attempt): $e');
+      }
+    }
+    if (!_isShareRewardVideoAdLoaded && mounted) {
+      _showEnhancedSnackBar(
+        message: 'Share ad unavailable, share will proceed without ad.',
+        icon: Icons.info_outline,
+        color: Colors.blue,
+      );
+    }
+  }
+
+  void _loadInterstitialAd() {
+    UnityAds.load(
+      placementId: AdHelper.interstitialAdUnitId,
+      onComplete: (placementId) {
+        setState(() {
+          _isVideoAdLoaded = true;
+        });
+        print('Interstitial Video Ad Loaded: $placementId');
+      },
+      onFailed: (placementId, error, message) {
+        print('Interstitial Video Ad Load Failed: $error $message');
+        setState(() {
+          _isVideoAdLoaded = false;
+        });
+      },
+    );
+  }
+
+  void _showRewardAd() {
+    if (_isRewardVideoAdLoaded && !kIsWeb) {
+      UnityAds.showVideoAd(
+        placementId: AdHelper.rewardedAdUnitId,
+        onStart: (placementId) => print('Reward Video Ad Started: $placementId'),
+        onClick: (placementId) => print('Reward Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) {
+          print('Reward Video Ad Skipped: $placementId');
+          _showEnhancedSnackBar(
+            message: 'Ad skipped, save will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          _captureAndSave(context);
+        },
+        onComplete: (placementId) {
+          print('Reward Video Ad Completed: $placementId');
+          _captureAndSave(context);
+          setState(() {
+            _isRewardVideoAdLoaded = false;
+          });
+          _loadRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+        onFailed: (placementId, error, message) {
+          print('Reward Video Ad Show Failed: $error $message');
+          _showEnhancedSnackBar(
+            message: 'Ad failed to show, save will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          _captureAndSave(context);
+          setState(() {
+            _isRewardVideoAdLoaded = false;
+          });
+          _loadRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+      );
+    } else {
+      // _showEnhancedSnackBar(
+      //   message: kIsWeb ? 'Save proceeding (ads not supported on web).' : 'Reward ad unavailable, save will proceed.',
+      //   icon: Icons.info_outline,
+      //   color: Colors.blue,
+      // );
+      _captureAndSave(context);
+    }
+  }
+
+  void _showShareRewardAd() {
+    if (_isShareRewardVideoAdLoaded && !kIsWeb) {
+      UnityAds.showVideoAd(
+        placementId: AdHelper.rewardedAdUnitId,
+        onStart: (placementId) => print('Share Reward Video Ad Started: $placementId'),
+        onClick: (placementId) => print('Share Reward Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) {
+          print('Share Reward Video Ad Skipped: $placementId');
+          _showEnhancedSnackBar(
+            message: 'Ad skipped, share will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          _captureAndShare(context);
+        },
+        onComplete: (placementId) {
+          print('Share Reward Video Ad Completed: $placementId');
+          _captureAndShare(context);
+          setState(() {
+            _isShareRewardVideoAdLoaded = false;
+          });
+          _loadShareRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+        onFailed: (placementId, error, message) {
+          print('Share Reward Video Ad Show Failed: $error $message');
+          _showEnhancedSnackBar(
+            message: 'Ad failed to show, share will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          _captureAndShare(context);
+          setState(() {
+            _isShareRewardVideoAdLoaded = false;
+          });
+          _loadShareRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+      );
+    } else {
+      _showEnhancedSnackBar(
+        message: kIsWeb ? 'Share proceeding (ads not supported on web).' : 'Share ad unavailable, share will proceed.',
+        icon: Icons.info_outline,
+        color: Colors.blue,
+      );
+      _captureAndShare(context);
+    }
+  }
+
+  void _showInterstitialAd() {
+    if (_isVideoAdLoaded && !kIsWeb) {
+      UnityAds.showVideoAd(
+        placementId: AdHelper.interstitialAdUnitId,
+        onStart: (placementId) => print('Interstitial Video Ad Started: $placementId'),
+        onClick: (placementId) => print('Interstitial Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) => print('Interstitial Video Ad Skipped: $placementId'),
+        onComplete: (placementId) {
+          print('Interstitial Video Ad Completed: $placementId');
+          setState(() {
+            _isVideoAdLoaded = false;
+          });
+          _loadInterstitialAd();
+        },
+        onFailed: (placementId, error, message) {
+          print('Interstitial Video Ad Show Failed: $error $message');
+          setState(() {
+            _isVideoAdLoaded = false;
+          });
+          _loadInterstitialAd();
+        },
+      );
+    }
   }
 
   Future<void> _captureAndSave(BuildContext context) async {
@@ -185,6 +403,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         isError: true,
       );
     }
+    _loadRewardAdWithRetry(3, const Duration(seconds: 2));
   }
 
   Future<void> _captureAndShare(BuildContext context) async {
@@ -265,6 +484,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         await tempFile.delete().catchError((e) => print('Error deleting temp file: $e'));
       }
     }
+    _loadInterstitialAd();
   }
 
   void _showEnhancedSnackBar({
@@ -314,6 +534,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
           onConfirm: () {
             final ws = Provider.of<WebSocketService>(context, listen: false);
             ws.leaveGameFromSummary(widget.gameId, widget.playerId);
+            _showInterstitialAd();
             widget.onHomePressed();
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
@@ -454,9 +675,11 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         body: Stack(
           children: [
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage('assets/images/beggarbg.png'),
+                  image: AssetImage(widget.isSinglePlayer
+                      ? 'assets/images/beggarbg2.png'
+                      : 'assets/images/beggarbg.png'),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -464,7 +687,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                 child: Center(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isLargeScreen ? 16 :10,
+                      horizontal: isLargeScreen ? 16 : 10,
                       vertical: isLargeScreen ? 32 : 16,
                     ),
                     child: FadeTransition(
@@ -485,6 +708,19 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
               ),
             ),
             if (_isLoading) _buildLoadingOverlay(),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: !kIsWeb
+                  ? UnityBannerAd(
+                placementId: AdHelper.bannerAdUnitId,
+                onLoad: (placementId) => print('Banner loaded: $placementId'),
+                onClick: (placementId) => print('Banner clicked: $placementId'),
+                onShown: (placementId) => print('Banner shown: $placementId'),
+                onFailed: (placementId, error, message) =>
+                    print('Banner failed: $error $message'),
+              )
+                  : null,
+            ),
           ],
         ),
       ),
@@ -513,7 +749,6 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildScreenshotContent(isLargeScreen, players),
-
           _buildActionButtons(isLargeScreen),
         ],
       ),
@@ -540,7 +775,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height:10),
+                const SizedBox(height: 10),
                 Image.asset(
                   'assets/images/beggarlogo.png',
                   height: isLargeScreen ? 120 : 100,
@@ -553,6 +788,27 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                     fontSize: isLargeScreen ? 28 : 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: widget.isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: widget.isSinglePlayer ? Colors.amber.shade200 : Colors.blue.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Text(
+                      widget.isSinglePlayer ? 'Single Player Mode' : 'Multiplayer Mode',
+                      style: TextStyle(
+                        fontFamily: "Poppins",
+                        fontSize: isLargeScreen ? 16 : 14,
+                        color: Colors.black54,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -570,7 +826,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                     color: Colors.black54,
                   ),
                 ),
-                SizedBox(height:10),
+                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -649,16 +905,16 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   IconData _getRoleIcon(String role) {
     switch (role) {
       case 'King':
-        return Icons.star; // Alternative: Icons.star, Icons.account_balance
+        return Icons.star;
       case 'Wise':
-        return Icons.lightbulb; // Alternative: Icons.lightbulb, Icons.book, Icons.school
+        return Icons.lightbulb;
       case 'Civilian':
       case 'Civilians':
-        return Icons.people; // Alternative: Icons.group, Icons.person, Icons.home
+        return Icons.people;
       case 'Beggar':
-        return Icons.person_outline; // Alternative: Icons.handshake, Icons.volunteer_activism, Icons.broken_image
+        return Icons.person_outline;
       default:
-        return Icons.person; // Alternative: Icons.question_mark, Icons.account_circle
+        return Icons.person;
     }
   }
 
@@ -685,14 +941,14 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
           isLargeScreen: isLargeScreen,
         ),
         _buildEnhancedButton(
-          onPressed: () => _captureAndShare(context),
+          onPressed: _showShareRewardAd,
           icon: Icons.share,
           color: Colors.purple,
           tooltip: 'Share Summary',
           isLargeScreen: isLargeScreen,
         ),
         _buildEnhancedButton(
-          onPressed: () => _captureAndSave(context),
+          onPressed: _showRewardAd,
           icon: Icons.save_alt,
           color: Colors.orange,
           tooltip: 'Save Summary',

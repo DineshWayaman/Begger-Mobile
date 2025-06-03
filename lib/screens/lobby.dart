@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:begger_card_game/widgets/floating_particles.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'package:uuid/uuid.dart';
+import '../services/ad_helper.dart';
 import '../services/websocket.dart';
 import '../widgets/custom_text_field.dart';
 import 'game.dart';
@@ -27,6 +30,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
+  bool _isBannerLoaded = false;
 
   final List<String> _botNameOptions = [
     'Emma', 'Liam', 'Olivia', 'Noah',
@@ -84,6 +88,25 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
 
     // Start the animation
     _animationController.forward();
+    _loadBannerAd();
+  }
+  //load banner ads
+  void _loadBannerAd() {
+    if (!kIsWeb) {
+      UnityAds.load(
+        placementId: AdHelper.bannerAdUnitId,
+        onFailed: (placementId, error, message) =>
+            print('Banner Ad Load Failed: $error $message'),
+        onComplete: (placementId) {
+          setState(() {
+            _isBannerLoaded = true;
+          });
+          print('Banner Ad Loaded: $placementId');
+        },
+      );
+
+
+    }
   }
 
   void _initBotNameControllers() {
@@ -173,8 +196,8 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
             child: Center(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(
-                  horizontal: isLargeScreen ? 16 : 24,
-                  vertical: isLargeScreen ? 32 : 16,
+                  horizontal: isLargeScreen ? 16 : 20,
+                  vertical: isLargeScreen ? 32 : 20,
                 ),
                 child: FadeTransition(
                   opacity: _fadeAnimation,
@@ -209,7 +232,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                               );
                             },
                             child: Padding(
-                              padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
+                              padding: EdgeInsets.all(isLargeScreen ? 32 : 20),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -229,6 +252,8 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                                   if (isSinglePlayer) ..._buildBotSettings(isLargeScreen),
                                   SizedBox(height: isLargeScreen ? 32 : 24),
                                   _buildJoinButton(isLargeScreen, websocket),
+                                  //if banner ad load add sized box in single player mode
+
                                 ],
                               ),
                             ),
@@ -240,6 +265,19 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                 ),
               ),
             ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: !kIsWeb
+                ? UnityBannerAd(
+                    placementId: AdHelper.bannerAdUnitId,
+                    onLoad: (placementId) => print('Banner loaded: $placementId'),
+                    onClick: (placementId) => print('Banner clicked: $placementId'),
+                    onShown: (placementId) => print('Banner shown: $placementId'),
+                    onFailed: (placementId, error, message) =>
+                        print('Banner failed: $error $message'),
+                  )
+                : null,
           ),
         ],
       ),
