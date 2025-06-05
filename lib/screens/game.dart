@@ -42,7 +42,6 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   List<Cards> selectedCards = [];
   final ScrollController _scrollController = ScrollController();
-  bool _showScrollThumb = false;
   List<Cards> _lastSentHand = [];
   String? _lastJokerMessage;
   final Set<String> _shownMessages = {};
@@ -92,10 +91,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (!widget.isSinglePlayer) {
       _initializeVoiceChat();
     }
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _updateScrollThumbVisibility();
-    });
-    _scrollController.addListener(_updateScrollThumbVisibility);
+    // _scrollController.addListener(_updateScrollThumbVisibility);
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.addListener(_onGameStateChanged);
     ws.onDismissDialog = () {
@@ -291,6 +287,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (!widget.isSinglePlayer) {
       _voiceChatService?.dispose();
     }
+    _voiceChatService?.dispose();
     final ws = Provider.of<WebSocketService>(context, listen: false);
     ws.removeListener(_onGameStateChanged);
     ws.onDismissDialog = null;
@@ -471,22 +468,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _updateScrollThumbVisibility() {
-    if (!_scrollController.hasClients || !mounted) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients || !mounted) return;
-
-      final maxScrollExtent = _scrollController.position.maxScrollExtent;
-      final newVisibility = maxScrollExtent > 0;
-
-      if (newVisibility != _showScrollThumb) {
-        setState(() {
-          _showScrollThumb = newVisibility;
-        });
-      }
-    });
-  }
+  // void _updateScrollThumbVisibility() {
+  //   if (!_scrollController.hasClients || !mounted) return;
+  //
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     if (!_scrollController.hasClients || !mounted) return;
+  //
+  //     final maxScrollExtent = _scrollController.position.maxScrollExtent;
+  //     final newVisibility = maxScrollExtent > 0;
+  //
+  //     if (newVisibility != _showScrollThumb) {
+  //       setState(() {
+  //         _showScrollThumb = newVisibility;
+  //       });
+  //     }
+  //   });
+  // }
 
   String _cardId(Cards card) {
     return '${card.suit ?? 'none'}-${card.rank ?? 'none'}-${card.isJoker}-${card.isDetails}';
@@ -2944,7 +2941,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                               } else {
                                                                                 selectedCards.add(card);
                                                                               }
-                                                                              _updateScrollThumbVisibility();
+                                                                              // _updateScrollThumbVisibility();
                                                                             });
                                                                           }
                                                                               : null,
@@ -2990,7 +2987,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       ),
                                                     ],
                                                   ),
-                                                  if (_showScrollThumb)
+                                                  // if (_showScrollThumb)
                                                     Positioned(
                                                       right: 4,
                                                       top: 0,
@@ -3476,7 +3473,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                                       } else {
                                                                         selectedCards.add(card);
                                                                       }
-                                                                      _updateScrollThumbVisibility();
+                                                                      // _updateScrollThumbVisibility();
                                                                     });
                                                                   }
                                                                       : null,
@@ -3530,7 +3527,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                               ),
                                             ],
                                           ),
-                                          if (_showScrollThumb)
+                                          // if (_showScrollThumb)
                                             Positioned(
                                               right: 4,
                                               top: 0,

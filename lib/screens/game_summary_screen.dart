@@ -51,6 +51,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   bool _isRewardVideoAdLoaded = false;
   bool _isVideoAdLoaded = false;
   bool _isShareRewardVideoAdLoaded = false;
+  bool _isReplayRewardVideoAdLoaded = false; // Add this line
 
   // Animation controllers
   late AnimationController _animationController;
@@ -136,7 +137,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
       }
 
       // Fallback to RenderRepaintBoundary
-      final boundary = _screenshotKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = _screenshotKey.currentContext?.findRenderObject()
+      as RenderRepaintBoundary?;
       if (boundary != null) {
         final image = await boundary.toImage(pixelRatio: 3.0);
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -150,15 +152,19 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     return null;
   }
 
- Future<void> _loadAdsWithRetry({int maxRetries = 3, Duration retryDelay = const Duration(seconds: 2)}) async {
-   await Future.wait([
-     _loadRewardAdWithRetry(maxRetries, retryDelay),
-     _loadShareRewardAdWithRetry(maxRetries, retryDelay),
-     Future(() => _loadInterstitialAd()),
-   ]);
- }
+  Future<void> _loadAdsWithRetry(
+      {int maxRetries = 3,
+        Duration retryDelay = const Duration(seconds: 2)}) async {
+    await Future.wait([
+      _loadRewardAdWithRetry(maxRetries, retryDelay),
+      _loadShareRewardAdWithRetry(maxRetries, retryDelay),
+      _loadReplayRewardAdWithRetry(maxRetries, retryDelay), // Add this line
+      Future(() => _loadInterstitialAd()),
+    ]);
+  }
 
-  Future<void> _loadRewardAdWithRetry(int maxRetries, Duration retryDelay) async {
+  Future<void> _loadRewardAdWithRetry(
+      int maxRetries, Duration retryDelay) async {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await UnityAds.load(
@@ -170,7 +176,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             print('Reward Video Ad Loaded: $placementId');
           },
           onFailed: (placementId, error, message) {
-            print('Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+            print(
+                'Reward Video Ad Load Failed (Attempt $attempt): $error $message');
             setState(() {
               _isRewardVideoAdLoaded = false;
             });
@@ -191,7 +198,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     // }
   }
 
-  Future<void> _loadShareRewardAdWithRetry(int maxRetries, Duration retryDelay) async {
+  Future<void> _loadShareRewardAdWithRetry(
+      int maxRetries, Duration retryDelay) async {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await UnityAds.load(
@@ -203,7 +211,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             print('Share Reward Video Ad Loaded: $placementId');
           },
           onFailed: (placementId, error, message) {
-            print('Share Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+            print(
+                'Share Reward Video Ad Load Failed (Attempt $attempt): $error $message');
             setState(() {
               _isShareRewardVideoAdLoaded = false;
             });
@@ -221,6 +230,35 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         icon: Icons.info_outline,
         color: Colors.blue,
       );
+    }
+  }
+
+  // Add this new function
+  Future<void> _loadReplayRewardAdWithRetry(
+      int maxRetries, Duration retryDelay) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await UnityAds.load(
+          placementId: AdHelper.rewardedAdUnitId,
+          onComplete: (placementId) {
+            setState(() {
+              _isReplayRewardVideoAdLoaded = true;
+            });
+            print('Replay Reward Video Ad Loaded: $placementId');
+          },
+          onFailed: (placementId, error, message) {
+            print(
+                'Replay Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+            setState(() {
+              _isReplayRewardVideoAdLoaded = false;
+            });
+          },
+        );
+        if (_isReplayRewardVideoAdLoaded) break;
+        if (attempt < maxRetries) await Future.delayed(retryDelay);
+      } catch (e) {
+        print('Replay Reward Ad Load Error (Attempt $attempt): $e');
+      }
     }
   }
 
@@ -246,8 +284,10 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     if (_isRewardVideoAdLoaded && !kIsWeb) {
       UnityAds.showVideoAd(
         placementId: AdHelper.rewardedAdUnitId,
-        onStart: (placementId) => print('Reward Video Ad Started: $placementId'),
-        onClick: (placementId) => print('Reward Video Ad Clicked: $placementId'),
+        onStart: (placementId) =>
+            print('Reward Video Ad Started: $placementId'),
+        onClick: (placementId) =>
+            print('Reward Video Ad Clicked: $placementId'),
         onSkipped: (placementId) {
           print('Reward Video Ad Skipped: $placementId');
           _showEnhancedSnackBar(
@@ -293,8 +333,10 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     if (_isShareRewardVideoAdLoaded && !kIsWeb) {
       UnityAds.showVideoAd(
         placementId: AdHelper.rewardedAdUnitId,
-        onStart: (placementId) => print('Share Reward Video Ad Started: $placementId'),
-        onClick: (placementId) => print('Share Reward Video Ad Clicked: $placementId'),
+        onStart: (placementId) =>
+            print('Share Reward Video Ad Started: $placementId'),
+        onClick: (placementId) =>
+            print('Share Reward Video Ad Clicked: $placementId'),
         onSkipped: (placementId) {
           print('Share Reward Video Ad Skipped: $placementId');
           _showEnhancedSnackBar(
@@ -328,7 +370,9 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
       );
     } else {
       _showEnhancedSnackBar(
-        message: kIsWeb ? 'Share proceeding (ads not supported on web).' : 'Share ad unavailable, share will proceed.',
+        message: kIsWeb
+            ? 'Share proceeding (ads not supported on web).'
+            : 'Share ad unavailable, share will proceed.',
         icon: Icons.info_outline,
         color: Colors.blue,
       );
@@ -340,9 +384,12 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     if (_isVideoAdLoaded && !kIsWeb) {
       UnityAds.showVideoAd(
         placementId: AdHelper.interstitialAdUnitId,
-        onStart: (placementId) => print('Interstitial Video Ad Started: $placementId'),
-        onClick: (placementId) => print('Interstitial Video Ad Clicked: $placementId'),
-        onSkipped: (placementId) => print('Interstitial Video Ad Skipped: $placementId'),
+        onStart: (placementId) =>
+            print('Interstitial Video Ad Started: $placementId'),
+        onClick: (placementId) =>
+            print('Interstitial Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) =>
+            print('Interstitial Video Ad Skipped: $placementId'),
         onComplete: (placementId) {
           print('Interstitial Video Ad Completed: $placementId');
           setState(() {
@@ -358,6 +405,51 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
           _loadInterstitialAd();
         },
       );
+    }
+  }
+
+  // Add this new function
+  void _showReplayRewardAd() {
+    if (_isReplayRewardVideoAdLoaded && !kIsWeb) {
+      UnityAds.showVideoAd(
+        placementId: AdHelper.rewardedAdUnitId,
+        onStart: (placementId) =>
+            print('Replay Reward Video Ad Started: $placementId'),
+        onClick: (placementId) =>
+            print('Replay Reward Video Ad Clicked: $placementId'),
+        onSkipped: (placementId) {
+          print('Replay Reward Video Ad Skipped: $placementId');
+          _showEnhancedSnackBar(
+            message: 'Ad skipped, replay will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          widget.onReplayPressed();
+        },
+        onComplete: (placementId) {
+          print('Replay Reward Video Ad Completed: $placementId');
+          widget.onReplayPressed();
+          setState(() {
+            _isReplayRewardVideoAdLoaded = false;
+          });
+          _loadReplayRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+        onFailed: (placementId, error, message) {
+          print('Replay Reward Video Ad Show Failed: $error $message');
+          _showEnhancedSnackBar(
+            message: 'Ad failed to show, replay will proceed.',
+            icon: Icons.info_outline,
+            color: Colors.blue,
+          );
+          widget.onReplayPressed();
+          setState(() {
+            _isReplayRewardVideoAdLoaded = false;
+          });
+          _loadReplayRewardAdWithRetry(3, const Duration(seconds: 2));
+        },
+      );
+    } else {
+      widget.onReplayPressed();
     }
   }
 
@@ -481,7 +573,9 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
       );
     } finally {
       if (tempFile != null && await tempFile.exists()) {
-        await tempFile.delete().catchError((e) => print('Error deleting temp file: $e'));
+        await tempFile
+            .delete()
+            .catchError((e) => print('Error deleting temp file: $e'));
       }
     }
     _loadInterstitialAd();
@@ -697,7 +791,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                         child: ScaleTransition(
                           scale: _scaleAnimation,
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: containerWidth),
+                            constraints:
+                            BoxConstraints(maxWidth: containerWidth),
                             child: _buildMainContent(isLargeScreen, players),
                           ),
                         ),
@@ -713,9 +808,12 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
               child: !kIsWeb
                   ? UnityBannerAd(
                 placementId: AdHelper.bannerAdUnitId,
-                onLoad: (placementId) => print('Banner loaded: $placementId'),
-                onClick: (placementId) => print('Banner clicked: $placementId'),
-                onShown: (placementId) => print('Banner shown: $placementId'),
+                onLoad: (placementId) =>
+                    print('Banner loaded: $placementId'),
+                onClick: (placementId) =>
+                    print('Banner clicked: $placementId'),
+                onShown: (placementId) =>
+                    print('Banner shown: $placementId'),
                 onFailed: (placementId, error, message) =>
                     print('Banner failed: $error $message'),
               )
@@ -727,7 +825,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     );
   }
 
-  Widget _buildMainContent(bool isLargeScreen, List<Map<String, dynamic>> players) {
+  Widget _buildMainContent(
+      bool isLargeScreen, List<Map<String, dynamic>> players) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isLargeScreen ? 15 : 0,
@@ -755,7 +854,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
     );
   }
 
-  Widget _buildScreenshotContent(bool isLargeScreen, List<Map<String, dynamic>> players) {
+  Widget _buildScreenshotContent(
+      bool isLargeScreen, List<Map<String, dynamic>> players) {
     return Screenshot(
       controller: screenshotController,
       child: RepaintBoundary(
@@ -792,17 +892,23 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: widget.isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
+                    color: widget.isSinglePlayer
+                        ? Colors.amber.shade50
+                        : Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: widget.isSinglePlayer ? Colors.amber.shade200 : Colors.blue.shade200,
+                      color: widget.isSinglePlayer
+                          ? Colors.amber.shade200
+                          : Colors.blue.shade200,
                       width: 1,
                     ),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
                     child: Text(
-                      widget.isSinglePlayer ? 'Single Player Mode' : 'Multiplayer Mode',
+                      widget.isSinglePlayer
+                          ? 'Single Player Mode'
+                          : 'Multiplayer Mode',
                       style: TextStyle(
                         fontFamily: "Poppins",
                         fontSize: isLargeScreen ? 16 : 14,
@@ -812,11 +918,13 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                ...players.map((player) => _buildPlayerItem(
+                ...players
+                    .map((player) => _buildPlayerItem(
                   role: player['role'],
                   names: player['names'],
                   isLargeScreen: isLargeScreen,
-                )).toList(),
+                ))
+                    .toList(),
                 const SizedBox(height: 5),
                 Text(
                   'All rights reserved Beggar Online',
@@ -933,7 +1041,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         ),
         _buildEnhancedButton(
           onPressed: _isRestartEnabled
-              ? widget.onReplayPressed
+              ? _showReplayRewardAd // Modified this line
               : _showRestartDisabledPopup,
           icon: Icons.replay,
           color: _isRestartEnabled ? Colors.green : Colors.grey,
@@ -979,44 +1087,44 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
           ),
           builder: (context, scale, child) {
             return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: isLargeScreen ? 60 : 60,
-                height: isLargeScreen ? 60 : 60,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      color,
-                      color.withOpacity(0.8),
+                scale: scale,
+                child: Container(
+                  width: isLargeScreen ? 60 : 60,
+                  height: isLargeScreen ? 60 : 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        color,
+                        color.withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: _isHovered ? 12 : 8,
+                        spreadRadius: _isHovered ? 2 : 1,
+                        offset: Offset(0, _isHovered ? 4 : 2),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: _isHovered ? 12 : 8,
-                      spreadRadius: _isHovered ? 2 : 1,
-                      offset: Offset(0, _isHovered ? 4 : 2),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onPressed,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Center(
-                      child: Icon(
-                        icon,
-                        size: isLargeScreen ? 28 : 24,
-                        color: Colors.white,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onPressed,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Center(
+                        child: Icon(
+                          icon,
+                          size: isLargeScreen ? 28 : 24,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                )
             );
           },
         ),
@@ -1048,7 +1156,8 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
+                  valueColor:
+                  AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
                 ),
                 const SizedBox(height: 16),
                 const Text(

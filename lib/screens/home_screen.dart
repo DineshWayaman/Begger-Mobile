@@ -13,6 +13,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/voice_chat_service.dart';
 import '../widgets/animated_button.dart';
 import '../widgets/enhanced_glow_widget.dart';
 import '../widgets/floating_particles.dart';
@@ -43,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Animation<Offset>> _buttonSlideAnimations = [];
   List<Animation<double>> _buttonFadeAnimations = [];
   bool _animationsInitialized = false;
+  VoiceChatService? _voiceChatService;
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _checkAndPromptForName();
     listenToConnectionChanges();
     _initializeAnimations();
+    _voiceChatService?.dispose();
   }
 
   void _initializeAnimations() {
