@@ -16,6 +16,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import '../models/game.dart';
 import '../models/card.dart';
@@ -61,6 +63,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRestarting = false;
   bool  _isVideoAdLoaded = false;
+  GlobalKey _gridViewKey = GlobalKey(); // Key for the GridView
+  TutorialCoachMark? _tutorialCoachMark;
+  bool _hasShownCoachMark = false;
 
   @override
   void initState() {
@@ -175,6 +180,106 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _audioPlayer.setSource(AssetSource('sounds/suffel.mp3'));
     _audioPlayer.setSource(AssetSource('sounds/play.mp3'));
     _loadInterstitialAd();
+    _checkCoachMarkStatus();
+  }
+
+  Future<void> _checkCoachMarkStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    _hasShownCoachMark = prefs.getBool('hasShownGridViewCoachMark') ?? false;
+  }
+
+  void _showCoachMark() async {
+    if (_hasShownCoachMark || !mounted) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasShownGridViewCoachMark', true);
+    _hasShownCoachMark = true;
+
+    _tutorialCoachMark = TutorialCoachMark(
+      targets: [
+        TargetFocus(
+          identify: 'gridView',
+          keyTarget: _gridViewKey,
+          alignSkip: Alignment.topRight,
+          contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              builder: (context, controller) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      !kIsWeb
+                          ? 'Use the scroll thumb on the right to navigate your cards'
+                          : 'Use mouse wheel to scroll through your cards',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 10),
+                    // ElevatedButton(
+                    //   onPressed: () {
+                    //     controller.next();
+                    //   },
+                    //   style: ElevatedButton.styleFrom(
+                    //     backgroundColor: Colors.blueAccent,
+                    //     shape: RoundedRectangleBorder(
+                    //       borderRadius: BorderRadius.circular(12),
+                    //     ),
+                    //   ),
+                    //   child: const Text(
+                    //     'Got it!',
+                    //     style: TextStyle(
+                    //       fontFamily: 'Poppins',
+                    //       color: Colors.white,
+                    //       fontSize: 16,
+                    //     ),
+                    //   ),
+                    // ),
+                    AnimatedScaleButton(
+                      onPressed: () {
+                        controller.next();
+                      },
+
+                      myBtnColor: widget.isSinglePlayer
+                          ? Colors.amberAccent
+                          : Colors.blueAccent,
+                      child:const Text(
+                          'Got it!',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+      onFinish: () {
+        _tutorialCoachMark = null;
+      },
+      onClickTarget: (target) {
+        _tutorialCoachMark?.next();
+      },
+      onSkip: () {
+        return true;
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _tutorialCoachMark?.show(context: context);
+      }
+    });
   }
 
   void _loadInterstitialAd() {
@@ -295,6 +400,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ws.socket.off('gameEnded');
     ws.socket.off('gameRestarted');
     _audioPlayer.dispose();
+    _tutorialCoachMark?.finish();
     super.dispose();
   }
 
@@ -2213,6 +2319,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           );
         }
+        // Show coach mark when game starts
+        if (game.status != 'waiting' && !_hasShownCoachMark) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showCoachMark();
+          });
+        }
 
         final player = game.players.firstWhere(
               (p) => p.id == widget.playerId,
@@ -2813,6 +2925,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                               20),
                                                           child: GridView
                                                               .builder(
+                                                            key: _gridViewKey, // Assign the GlobalKey here
                                                             physics:
                                                             const NeverScrollableScrollPhysics(),
                                                             shrinkWrap:
@@ -3321,6 +3434,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                                       top: 8.0,
                                                       right: 20),
                                                   child: GridView.builder(
+                                                    key: _gridViewKey, // Assign the GlobalKey here
                                                     physics:
                                                     const NeverScrollableScrollPhysics(),
                                                     shrinkWrap: true,

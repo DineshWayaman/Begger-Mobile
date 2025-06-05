@@ -224,13 +224,13 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         print('Share Reward Ad Load Error (Attempt $attempt): $e');
       }
     }
-    if (!_isShareRewardVideoAdLoaded && mounted) {
-      _showEnhancedSnackBar(
-        message: 'Share ad unavailable, share will proceed without ad.',
-        icon: Icons.info_outline,
-        color: Colors.blue,
-      );
-    }
+    // if (!_isShareRewardVideoAdLoaded && mounted) {
+    //   _showEnhancedSnackBar(
+    //     message: 'Share ad unavailable, share will proceed without ad.',
+    //     icon: Icons.info_outline,
+    //     color: Colors.blue,
+    //   );
+    // }
   }
 
   // Add this new function
@@ -290,11 +290,11 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             print('Reward Video Ad Clicked: $placementId'),
         onSkipped: (placementId) {
           print('Reward Video Ad Skipped: $placementId');
-          _showEnhancedSnackBar(
-            message: 'Ad skipped, save will proceed.',
-            icon: Icons.info_outline,
-            color: Colors.blue,
-          );
+          // _showEnhancedSnackBar(
+          //   message: 'Ad skipped, save will proceed.',
+          //   icon: Icons.info_outline,
+          //   color: Colors.blue,
+          // );
           _captureAndSave(context);
         },
         onComplete: (placementId) {
@@ -307,11 +307,11 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         },
         onFailed: (placementId, error, message) {
           print('Reward Video Ad Show Failed: $error $message');
-          _showEnhancedSnackBar(
-            message: 'Ad failed to show, save will proceed.',
-            icon: Icons.info_outline,
-            color: Colors.blue,
-          );
+          // _showEnhancedSnackBar(
+          //   message: 'Ad failed to show, save will proceed.',
+          //   icon: Icons.info_outline,
+          //   color: Colors.blue,
+          // );
           _captureAndSave(context);
           setState(() {
             _isRewardVideoAdLoaded = false;
