@@ -155,16 +155,17 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   Future<void> _loadAdsWithRetry(
       {int maxRetries = 3,
         Duration retryDelay = const Duration(seconds: 2)}) async {
+    // Ad solving: Load only one rewarded ad for both save and share, plus replay and interstitial
     await Future.wait([
       _loadRewardAdWithRetry(maxRetries, retryDelay),
-      _loadShareRewardAdWithRetry(maxRetries, retryDelay),
-      _loadReplayRewardAdWithRetry(maxRetries, retryDelay), // Add this line
+      _loadReplayRewardAdWithRetry(maxRetries, retryDelay),
       Future(() => _loadInterstitialAd()),
     ]);
   }
 
   Future<void> _loadRewardAdWithRetry(
       int maxRetries, Duration retryDelay) async {
+    // Ad solving: Load a single rewarded ad for both save and share
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         await UnityAds.load(
@@ -189,49 +190,42 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         print('Reward Ad Load Error (Attempt $attempt): $e');
       }
     }
-    // if (!_isRewardVideoAdLoaded && mounted) {
-    //   _showEnhancedSnackBar(
-    //     message: 'Reward ad unavailable, save will proceed without ad.',
-    //     icon: Icons.info_outline,
-    //     color: Colors.blue,
-    //   );
-    // }
   }
 
-  Future<void> _loadShareRewardAdWithRetry(
-      int maxRetries, Duration retryDelay) async {
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await UnityAds.load(
-          placementId: AdHelper.rewardedAdUnitId,
-          onComplete: (placementId) {
-            setState(() {
-              _isShareRewardVideoAdLoaded = true;
-            });
-            print('Share Reward Video Ad Loaded: $placementId');
-          },
-          onFailed: (placementId, error, message) {
-            print(
-                'Share Reward Video Ad Load Failed (Attempt $attempt): $error $message');
-            setState(() {
-              _isShareRewardVideoAdLoaded = false;
-            });
-          },
-        );
-        if (_isShareRewardVideoAdLoaded) break;
-        if (attempt < maxRetries) await Future.delayed(retryDelay);
-      } catch (e) {
-        print('Share Reward Ad Load Error (Attempt $attempt): $e');
-      }
-    }
-    // if (!_isShareRewardVideoAdLoaded && mounted) {
-    //   _showEnhancedSnackBar(
-    //     message: 'Share ad unavailable, share will proceed without ad.',
-    //     icon: Icons.info_outline,
-    //     color: Colors.blue,
-    //   );
-    // }
-  }
+  // Future<void> _loadShareRewardAdWithRetry(
+  //     int maxRetries, Duration retryDelay) async {
+  //   for (int attempt = 1; attempt <= maxRetries; attempt++) {
+  //     try {
+  //       await UnityAds.load(
+  //         placementId: AdHelper.rewardedAdUnitId,
+  //         onComplete: (placementId) {
+  //           setState(() {
+  //             _isShareRewardVideoAdLoaded = true;
+  //           });
+  //           print('Share Reward Video Ad Loaded: $placementId');
+  //         },
+  //         onFailed: (placementId, error, message) {
+  //           print(
+  //               'Share Reward Video Ad Load Failed (Attempt $attempt): $error $message');
+  //           setState(() {
+  //             _isShareRewardVideoAdLoaded = false;
+  //           });
+  //         },
+  //       );
+  //       if (_isShareRewardVideoAdLoaded) break;
+  //       if (attempt < maxRetries) await Future.delayed(retryDelay);
+  //     } catch (e) {
+  //       print('Share Reward Ad Load Error (Attempt $attempt): $e');
+  //     }
+  //   }
+  //   // if (!_isShareRewardVideoAdLoaded && mounted) {
+  //   //   _showEnhancedSnackBar(
+  //   //     message: 'Share ad unavailable, share will proceed without ad.',
+  //   //     icon: Icons.info_outline,
+  //   //     color: Colors.blue,
+  //   //   );
+  //   // }
+  // }
 
   // Add this new function
   Future<void> _loadReplayRewardAdWithRetry(
@@ -281,6 +275,7 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
   }
 
   void _showRewardAd() {
+    // Ad solving: Use single rewarded ad for save action
     if (_isRewardVideoAdLoaded && !kIsWeb) {
       UnityAds.showVideoAd(
         placementId: AdHelper.rewardedAdUnitId,
@@ -290,11 +285,6 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             print('Reward Video Ad Clicked: $placementId'),
         onSkipped: (placementId) {
           print('Reward Video Ad Skipped: $placementId');
-          // _showEnhancedSnackBar(
-          //   message: 'Ad skipped, save will proceed.',
-          //   icon: Icons.info_outline,
-          //   color: Colors.blue,
-          // );
           _captureAndSave(context);
         },
         onComplete: (placementId) {
@@ -307,11 +297,6 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         },
         onFailed: (placementId, error, message) {
           print('Reward Video Ad Show Failed: $error $message');
-          // _showEnhancedSnackBar(
-          //   message: 'Ad failed to show, save will proceed.',
-          //   icon: Icons.info_outline,
-          //   color: Colors.blue,
-          // );
           _captureAndSave(context);
           setState(() {
             _isRewardVideoAdLoaded = false;
@@ -320,17 +305,14 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
         },
       );
     } else {
-      // _showEnhancedSnackBar(
-      //   message: kIsWeb ? 'Save proceeding (ads not supported on web).' : 'Reward ad unavailable, save will proceed.',
-      //   icon: Icons.info_outline,
-      //   color: Colors.blue,
-      // );
+      // Ad solving: Proceed with save if ad not loaded
       _captureAndSave(context);
     }
   }
 
   void _showShareRewardAd() {
-    if (_isShareRewardVideoAdLoaded && !kIsWeb) {
+    // Ad solving: Use single rewarded ad for share action
+    if (_isRewardVideoAdLoaded && !kIsWeb) {
       UnityAds.showVideoAd(
         placementId: AdHelper.rewardedAdUnitId,
         onStart: (placementId) =>
@@ -339,43 +321,27 @@ class _GameSummaryScreenState extends State<GameSummaryScreen>
             print('Share Reward Video Ad Clicked: $placementId'),
         onSkipped: (placementId) {
           print('Share Reward Video Ad Skipped: $placementId');
-          _showEnhancedSnackBar(
-            message: 'Ad skipped, share will proceed.',
-            icon: Icons.info_outline,
-            color: Colors.blue,
-          );
           _captureAndShare(context);
         },
         onComplete: (placementId) {
           print('Share Reward Video Ad Completed: $placementId');
           _captureAndShare(context);
           setState(() {
-            _isShareRewardVideoAdLoaded = false;
+            _isRewardVideoAdLoaded = false;
           });
-          _loadShareRewardAdWithRetry(3, const Duration(seconds: 2));
+          _loadRewardAdWithRetry(3, const Duration(seconds: 2));
         },
         onFailed: (placementId, error, message) {
           print('Share Reward Video Ad Show Failed: $error $message');
-          _showEnhancedSnackBar(
-            message: 'Ad failed to show, share will proceed.',
-            icon: Icons.info_outline,
-            color: Colors.blue,
-          );
           _captureAndShare(context);
           setState(() {
-            _isShareRewardVideoAdLoaded = false;
+            _isRewardVideoAdLoaded = false;
           });
-          _loadShareRewardAdWithRetry(3, const Duration(seconds: 2));
+          _loadRewardAdWithRetry(3, const Duration(seconds: 2));
         },
       );
     } else {
-      _showEnhancedSnackBar(
-        message: kIsWeb
-            ? 'Share proceeding (ads not supported on web).'
-            : 'Share ad unavailable, share will proceed.',
-        icon: Icons.info_outline,
-        color: Colors.blue,
-      );
+      // Ad solving: Proceed with share if ad not loaded
       _captureAndShare(context);
     }
   }

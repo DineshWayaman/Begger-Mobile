@@ -1,4 +1,4 @@
-package com.globevik.begger.begger_card_game
+package com.globevik.beggar
 
 import io.flutter.embedding.android.FlutterActivity
 

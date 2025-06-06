@@ -2,27 +2,56 @@ import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../models/game.dart';
 import '../models/card.dart';
+import '../models/player.dart';
 
 class WebSocketService with ChangeNotifier {
   late IO.Socket socket;
   Game? game;
   String? error;
   String? gameOverSummary;
+  String? _lastPlayerId; // Store last known playerId for reconnection
   void Function()? onDismissDialog;
   void Function(Map<String, dynamic>)? onSelectKingCard;
   void Function(String)? onCardExchangeNotification;
   void Function(String, int)? onTurnTimerStart; // Pass Timer: Callback for turn timer
 
   WebSocketService() {
-    socket = IO.io('https://playbeggar.online/', <String, dynamic>{
-    // socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
+    // socket = IO.io('https://playbeggar.online/', <String, dynamic>{
+    socket = IO.io('http://192.168.8.210:3000', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'reconnection': true, // Enable automatic reconnection
+      'reconnectionAttempts': 15, // Increased attempts for reliability
+      'reconnectionDelay': 500, // Reduced initial delay for faster reconnect
+      'reconnectionDelayMax': 3000, // Reduced max delay
     });
 
+    // Connection established
     socket.onConnect((_) {
-      debugPrint('Socket connected');
+      debugPrint('Socket connected: ${socket.id}');
+      if (game != null && _lastPlayerId != null) {
+        requestGameState(game!.id );
+      }
       notifyListeners();
+    });
+
+    // Handle reconnection
+    socket.onReconnect((_) {
+      debugPrint('Socket reconnected: ${socket.id}');
+      if (game != null && _lastPlayerId != null) {
+        debugPrint('Emitting rejoin for gameId=${game!.id}, playerId=$_lastPlayerId');
+        socket.emit('rejoin', {
+          'gameId': game!.id,
+          'playerId': _lastPlayerId,
+        });
+        requestGameState(game!.id);
+      } else {
+        debugPrint('Rejoin skipped: game=${game?.id ?? 'null'}, playerId=${_lastPlayerId ?? 'null'}');
+        error = 'Cannot rejoin: Game no longer available';
+        game = null;
+        _lastPlayerId = null;
+        notifyListeners();
+      }
     });
 
     socket.onConnectError((data) {
@@ -30,18 +59,53 @@ class WebSocketService with ChangeNotifier {
       error = 'Connection failed: $data';
       notifyListeners();
     });
+    // Disconnection
+    socket.onDisconnect((_) {
+      debugPrint('Socket disconnected');
+      error = 'Disconnected from server. Attempting to reconnect...';
+      notifyListeners();
+    });
 
+    // Game state update
     socket.on('gameUpdate', (data) {
-      debugPrint('Received gameUpdate: $data');
+      debugPrint('Received gameUpdate');
       try {
         game = Game.fromJson(data);
+        _lastPlayerId = game!.players
+            .firstWhere(
+                (p) => p.id.contains(socket.id as Pattern) || p.name == game!.players.first.name,
+            orElse: () => Player(id: '', name: '', hand: []))
+            .id;
+        debugPrint('Updated lastPlayerId: $_lastPlayerId');
         error = null;
       } catch (e) {
-        debugPrint('Error parsing game: $e');
+        debugPrint('Error parsing game state: $e');
         error = 'Failed to load game: $e';
       }
       notifyListeners();
     });
+
+    // Player disconnected
+    socket.on('playerDisconnected', (data) {
+      debugPrint('Player disconnected: $data');
+      error = 'Player ${data['playerName'] ?? 'unknown'} disconnected. Waiting for reconnect.';
+      notifyListeners();
+    });
+    // Player reconnected
+    socket.on('playerReconnected', (data) {
+      debugPrint('Player reconnected: $data');
+      error = 'Player ${data['playerName'] ?? 'unknown'} has reconnected.';
+      notifyListeners();
+    });
+    // Added: Handle player removal due to timeout or leave
+    // Player removed
+    socket.on('playerRemoved', (data) {
+  debugPrint('Player removed: $data');
+  error = data['message'] ?? 'You have been removed from the game.';
+  game = null;
+  _lastPlayerId = null;
+  notifyListeners();
+});
 
     socket.on('dismissDialog', (_) {
       debugPrint('Received dismissDialog event');
@@ -54,6 +118,14 @@ class WebSocketService with ChangeNotifier {
     socket.on('gameOver', (data) {
       debugPrint('Received gameOver: $data');
       gameOverSummary = data['summaryMessage'];
+      notifyListeners();
+    });
+    // Game ended
+    socket.on('gameEnded', (data) {
+      debugPrint('Game ended: $data');
+      error = data['message'] ?? 'Game has ended.';
+      game = null;
+      _lastPlayerId = null;
       notifyListeners();
     });
 
@@ -73,9 +145,14 @@ class WebSocketService with ChangeNotifier {
       notifyListeners();
     });
 
+    // Server error
     socket.on('error', (data) {
-      debugPrint('Received error: $data');
-      error = data.toString();
+      debugPrint('Server error: $data');
+      error = data ?? 'An error occurred on the server.';
+      if (data.contains('Game not found') || data.contains('Player not found')) {
+        game = null;
+        _lastPlayerId = null;
+      }
       notifyListeners();
     });
     // Home leave update: Listen for player leaving via summary screen
@@ -91,18 +168,24 @@ class WebSocketService with ChangeNotifier {
       }
       notifyListeners();
     });
+    // Ensure error event is aliased as serverError for compatibility
+    socket.on('serverError', (data) {
+      socket.emit('error', data);
+    });
   }
 
   void connect() {
     socket.connect();
   }
 
+  // Request game state
   void requestGameState(String gameId) {
     debugPrint('Requesting game state for $gameId');
     socket.emit('requestGameState', {'gameId': gameId});
   }
 
   void joinGame(String gameId, String playerId, String playerName, {bool isTestMode = false}) {
+    _lastPlayerId = '${gameId}-${playerName}'; // Store last playerId for reconnection
     debugPrint('Joining game: $gameId, player: $playerId, test: $isTestMode');
     // Reset game state to avoid carrying over previous game data
     game = null;
@@ -110,7 +193,7 @@ class WebSocketService with ChangeNotifier {
     error = null;
     socket.emit('join', {
       'gameId': gameId,
-      'playerId': playerId,
+      'playerId': _lastPlayerId,
       'playerName': playerName,
       'isTestMode': isTestMode,
     });

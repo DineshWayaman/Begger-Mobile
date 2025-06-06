@@ -1,11 +1,11 @@
 {
-    "name": "begger_card_game",
-    "short_name": "begger_card_game",
+    "name": "Beggar Online",
+    "short_name": "Beggar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#003391",
     "theme_color": "#2196F3FF",
-    "description": "A new Flutter project.",
+    "description": "Strategic card game where players aim to outsmart their opponents by playing cards with different values and abilities.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -30,7 +30,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
-  bool _isBannerLoaded = false;
+  bool _bannerShown = false;
 
   final List<String> _botNameOptions = [
     'Emma', 'Liam', 'Olivia', 'Noah',
@@ -88,26 +88,8 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
 
     // Start the animation
     _animationController.forward();
-    _loadBannerAd();
   }
-  //load banner ads
-  void _loadBannerAd() {
-    if (!kIsWeb) {
-      UnityAds.load(
-        placementId: AdHelper.bannerAdUnitId,
-        onFailed: (placementId, error, message) =>
-            print('Banner Ad Load Failed: $error $message'),
-        onComplete: (placementId) {
-          setState(() {
-            _isBannerLoaded = true;
-          });
-          print('Banner Ad Loaded: $placementId');
-        },
-      );
 
-
-    }
-  }
 
   void _initBotNameControllers() {
     // Shuffle the list of real names to get random selections
@@ -253,7 +235,8 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                                   SizedBox(height: isLargeScreen ? 32 : 24),
                                   _buildJoinButton(isLargeScreen, websocket),
                                   //if banner ad load add sized box in single player mode
-
+                                  if (isSinglePlayer && _bannerShown)
+                                    SizedBox(height: 10),
                                 ],
                               ),
                             ),
@@ -273,7 +256,12 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                     placementId: AdHelper.bannerAdUnitId,
                     onLoad: (placementId) => print('Banner loaded: $placementId'),
                     onClick: (placementId) => print('Banner clicked: $placementId'),
-                    onShown: (placementId) => print('Banner shown: $placementId'),
+              onShown: (placementId) {
+                print('Banner shown: $placementId');
+                setState(() {
+                  _bannerShown = true;
+                });
+              },
                     onFailed: (placementId, error, message) =>
                         print('Banner failed: $error $message'),
                   )
@@ -743,7 +731,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   void dispose() {
     _gameIdController.dispose();
     _animationController.dispose();
-    _playerNameController.dispose();
+    // _playerNameController.dispose();
     // Dispose bot name controllers
     for (var controller in botNameControllers) {
       controller.dispose();

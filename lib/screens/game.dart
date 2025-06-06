@@ -66,6 +66,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   GlobalKey _gridViewKey = GlobalKey(); // Key for the GridView
   TutorialCoachMark? _tutorialCoachMark;
   bool _hasShownCoachMark = false;
+  bool _bannerShown = false;
 
   @override
   void initState() {
@@ -98,6 +99,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
     // _scrollController.addListener(_updateScrollThumbVisibility);
     final ws = Provider.of<WebSocketService>(context, listen: false);
+    // Request game state to ensure sync
+    if (ws.game == null || ws.game!.id != widget.gameId) {
+      ws.requestGameState(widget.gameId);
+    }
     ws.addListener(_onGameStateChanged);
     ws.onDismissDialog = () {
       if (_isDialogShowing && mounted && !_isReplayInitiator) {
@@ -283,22 +288,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _loadInterstitialAd() {
-    UnityAds.load(
-      placementId: AdHelper.interstitialAdUnitId,
-      onComplete: (placementId) {
-        setState(() {
-          _isVideoAdLoaded = true;
-        });
-        print('Video Ad Loaded: $placementId');
-      },
-      onFailed: (placementId, error, message) {
-        print('Video Ad Load Failed: $error $message');
-        setState(() {
-          _isVideoAdLoaded = false;
-        });
-
-      },
-    );
+    if (!kIsWeb) {
+      UnityAds.load(
+        placementId: AdHelper.interstitialAdUnitId,
+        onComplete: (placementId) {
+          setState(() {
+            _isVideoAdLoaded = true;
+          });
+          print('Video Ad Loaded: $placementId');
+        },
+        onFailed: (placementId, error, message) {
+          print('Video Ad Load Failed: $error $message');
+          setState(() {
+            _isVideoAdLoaded = false;
+          });
+        },
+      );
+    }
   }
 
   void _showInterstitialAd() {
@@ -407,16 +413,32 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _onGameStateChanged() {
     final ws = Provider.of<WebSocketService>(context, listen: false);
     final game = ws.game;
-    if (game == null) {
-      _showGameMessages();
-      return;
+
+    // Navigate to lobby on game end or removal
+    if (ws.error != null &&
+        (ws.error!.contains('Game has ended') ||
+            ws.error!.contains('removed from the game') ||
+            ws.error!.contains('Game not found'))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showEnhancedSnackBar(
+          message: ws.error!,
+          icon: Icons.error,
+          color: Colors.redAccent,
+          isError: true,
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      });
     }
 
     debugPrint(
-        'Game state updated. Current turn: ${game.currentTurn}, Player: ${game.players[game.currentTurn].name}');
+        'Game state updated. Current turn: ${game?.currentTurn}, Player: ${game?.players[game.currentTurn].name}');
 
     // Update current turn player and manage timer
-    if (!game.isTestMode &&
+    if (game != null &&
+        !game.isTestMode &&
         _currentTurnPlayerId != game.players[game.currentTurn].id) {
       setState(() {
         _currentTurnPlayerId = game.players[game.currentTurn].id;
@@ -426,7 +448,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     }
 
-    if (!_hasShownNewRoundMessage &&
+    if (game != null &&
+        !_hasShownNewRoundMessage &&
         game.status != 'waiting' &&
         game.pile.isEmpty &&
         game.passCount == 0) {
@@ -457,13 +480,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       }
     }
 
-    if (game.pile.isNotEmpty) {
+    if (game != null && game.pile.isNotEmpty) {
       final lastPlay = game.pile.last;
       final player = game.lastPlayedPlayerId != null
           ? game.players.firstWhere(
-            (p) => p.id == game.lastPlayedPlayerId,
-        orElse: () => Player(id: '', name: 'Unknown', hand: []),
-      )
+              (p) => p.id == game.lastPlayedPlayerId,
+              orElse: () => Player(id: '', name: 'Unknown', hand: []),
+            )
           : null;
 
       if (player != null && player.id != '' && player.id != widget.playerId) {
@@ -477,14 +500,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _lastJokerMessage = jokerMessage;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                // ScaffoldMessenger.of(context).showSnackBar(
-                //   SnackBar(
-                //     content: Text(jokerMessage,
-                //         style: TextStyle(fontFamily: "Poppins")),
-                //     backgroundColor: Colors.blueAccent,
-                //     duration: const Duration(seconds: 3),
-                //   ),
-                // );
                 _showEnhancedSnackBar(
                   message: jokerMessage,
                   icon: Icons.card_giftcard,
@@ -1111,7 +1126,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         ws.error = null;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const LobbyScreen()),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       } else if (mounted) {
         // Reset game state
@@ -1214,6 +1229,141 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Consumer<WebSocketService>(
       builder: (context, ws, _) {
+        // Handle game ended, player removed, or game not found
+        if (ws.error != null &&
+            (ws.error!.contains('Game has ended') ||
+                ws.error!.contains('removed from the game') ||
+                ws.error!.contains('Game not found'))) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showEnhancedSnackBar(
+              message: "The game has ended.",
+              icon: Icons.error,
+              color: Colors.redAccent,
+              isError: true,
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          });
+          return Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(widget.isSinglePlayer
+                      ? 'assets/images/beggarbg2.png'
+                      : 'assets/images/beggarbg.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Error icon
+
+                      const SizedBox(height: 12),
+                      Text(
+                        ws.error!.contains('Game has ended')
+                            ? 'The game has ended due to a disconnection exceeding time limit. So we are redirecting you to the home screen.'
+                            : 'Game not available because of your connection issue, So we are redirecting you to the home screen.',
+                        style: const TextStyle(
+                          fontFamily: "Poppins",
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      AnimatedScaleButton(
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HomeScreen()),
+                          );
+                        },
+                        myBtnColor: widget.isSinglePlayer
+                            ? Colors.amberAccent
+                            : Colors.blueAccent,
+                        child: const Text(
+                          'Go to Home',
+                          style: TextStyle(
+                            fontFamily: "Poppins",
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+
+        }
+
+        // Handle disconnection/reconnection
+        if (!ws.socket.connected || ws.game == null || ws.game!.id != widget.gameId) {
+          return Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage(widget.isSinglePlayer
+                      ? 'assets/images/beggarbg2.png'
+                      : 'assets/images/beggarbg.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.white),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Reconnecting to server...',
+                      style: const TextStyle(
+                        fontFamily: "Poppins",
+                        fontSize: 20,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    AnimatedScaleButton(
+                      myBtnColor: widget.isSinglePlayer ? Colors.amberAccent : Colors.blueAccent,
+                      onPressed: () {
+                        ws.connect();
+                        ws.requestGameState(widget.gameId);
+                        // //if game == null after restore i need to navigate home screen
+                        // if (ws.game == null) {
+                        //   Navigator.pushReplacement(
+                        //     context,
+                        //     MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        //   );
+                        // }
+                      },
+                      child: const Text(
+                        'Retry Now',
+                        style: TextStyle(
+                          fontFamily: "Poppins",
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
         if (ws.error != null) {
           final errorMessage = ws.error!;
           ws.error = null;
@@ -1238,7 +1388,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 _shownMessages.clear();
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const LobbyScreen()),
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
                 );
               }
             }
@@ -1646,7 +1796,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                             mainAxisSize:
                                             MainAxisSize.min,
                                             children: [
-                                              const SizedBox(height: 50),
+
+                                              const SizedBox(height: 45),
+                                              Text("If any user leave the game or disconnects for 45 seconds, the game will be ended.",style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  color: Colors.white,
+                                                  fontSize: 14
+                                              ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              SizedBox(height:5),
                                               // Players list
                                               ConstrainedBox(
                                                 constraints:
@@ -2009,6 +2168,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           ),
                                         ],
                                       ),
+                                      // Container(
+                                      //   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                      //   decoration: BoxDecoration(
+                                      //     color: Colors.redAccent,
+                                      //     borderRadius: BorderRadius.circular(8),
+                                      //     border: Border.all(color: Colors.blue.shade100),
+                                      //   ),
+                                      //   child: Row(
+                                      //     children: [
+                                      //       Icon(Icons.info_outline, color: Colors.blue.shade600, size: 32),
+                                      //       const SizedBox(width: 8),
+                                      //       Expanded(
+                                      //         child: Text(
+                                      //           "If any user leave the game or disconnects for 45 seconds, the game will be ended.",
+                                      //           textAlign: TextAlign.left,
+                                      //           style: TextStyle(
+                                      //             // fontSize: 12,
+                                      //             color: Colors.blue.shade800,
+                                      //           ),
+                                      //         ),
+                                      //       ),
+                                      //     ],
+                                      //   ),
+                                      // ),
                                       const SizedBox(height: 10),
                                       // Players list
                                       ConstrainedBox(
@@ -2089,7 +2272,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 30),
+                                      const SizedBox(height: 10),
+                                      Text("If any user leave the game or disconnects for 45 seconds, the game will be ended.",style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          color: Colors.white,
+                                          fontSize: 14
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height:10),
                                       // Action buttons
                                       LayoutBuilder(
                                         builder: (context, constraints) {
@@ -2367,7 +2558,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const LobbyScreen()),
+                              builder: (_) => const HomeScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -2378,7 +2569,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             horizontal: 20, vertical: 12),
                       ),
                       child: const Text(
-                        'Return to Lobby',
+                        'Return to Home',
                         style: TextStyle(
                           fontFamily: "Poppins",
                           color: Colors.blueAccent,
@@ -3793,24 +3984,34 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Align(
-                              alignment: Alignment.bottomCenter,
-                              child: !kIsWeb
-                                  ? UnityBannerAd(
-                                placementId: AdHelper.bannerAdUnitId,
-                                onLoad: (placementId) => print('Banner loaded: $placementId'),
-                                onClick: (placementId) => print('Banner clicked: $placementId'),
-                                onShown: (placementId) => print('Banner shown: $placementId'),
-                                onFailed: (placementId, error, message) =>
-                                    print('Banner failed: $error $message'),
-                              )
-                                  : null,
-                            ),
+
+                            SizedBox(height: _bannerShown ? 50 : 4),
+
+
                           ],
                         );
                       },
                     ),
+                    if (!kIsWeb)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: UnityBannerAd(
+                          placementId: AdHelper.bannerAdUnitId,
+                          onLoad: (placementId) => print('Banner loaded: $placementId'),
+                          onClick: (placementId) => print('Banner clicked: $placementId'),
+                          onShown: (placementId) {
+                            print('Banner shown: $placementId');
+                            setState(() {
+                              _bannerShown = true;
+                            });
+                          },
+                          onFailed: (placementId, error, message) =>
+                              print('Banner failed: $error $message'),
+                        ),
+                      ),
+
                     if (_showNewRoundNotification && _newRoundMessage != null)
                       Positioned(
                         left: 16,
