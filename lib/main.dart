@@ -24,7 +24,7 @@ Future<void> main() async {
     // Initialize Unity Ads for Android and iOS
     await UnityAds.init(
       gameId: AdHelper.gameId,
-      testMode: true, // Set to false in production
+      testMode: false, // Set to false in production
       onComplete: () => print('Unity Ads Initialization Complete'),
       onFailed: (error, message) => print('Unity Ads Initialization Failed: $error $message'),
     );

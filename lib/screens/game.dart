@@ -196,6 +196,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _showCoachMark() async {
     if (_hasShownCoachMark || !mounted) return;
 
+    // Check screen size
+    if (MediaQuery.of(context).size.width >= 850) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('hasShownGridViewCoachMark', true);
     _hasShownCoachMark = true;
@@ -214,9 +216,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      !kIsWeb
-                          ? 'Use the scroll thumb on the right to navigate your cards'
-                          : 'Use mouse wheel to scroll through your cards',
+                       'Use the scroll thumb on the right or mouse wheel to navigate your cards',
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         color: Colors.white,
@@ -226,25 +226,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
-                    // ElevatedButton(
-                    //   onPressed: () {
-                    //     controller.next();
-                    //   },
-                    //   style: ElevatedButton.styleFrom(
-                    //     backgroundColor: Colors.blueAccent,
-                    //     shape: RoundedRectangleBorder(
-                    //       borderRadius: BorderRadius.circular(12),
-                    //     ),
-                    //   ),
-                    //   child: const Text(
-                    //     'Got it!',
-                    //     style: TextStyle(
-                    //       fontFamily: 'Poppins',
-                    //       color: Colors.white,
-                    //       fontSize: 16,
-                    //     ),
-                    //   ),
-                    // ),
                     AnimatedScaleButton(
                       onPressed: () {
                         controller.next();
