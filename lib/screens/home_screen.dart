@@ -333,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _shareInviteWithImage() async {
     try {
       final String message =
-          "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.beggar.cardgame\nor Play online \nhttps://playbeggar.online";
+          "Join me in this amazing card game! Download it now!\nhttps://play.google.com/store/apps/details?id=com.globevik.beggar\nor Play online \nhttps://playbeggar.online";
 
       if (kIsWeb) {
         await Share.share(
