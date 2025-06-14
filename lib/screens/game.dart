@@ -315,8 +315,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-
-
   Future<void> _initializeVoiceChat() async {
     // Only initialize voice chat if not in single-player mode
     if (widget.isSinglePlayer) return;
@@ -356,6 +354,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     // Dispose voice chat service only if initialized (not single-player)
     if (!widget.isSinglePlayer) {
       _voiceChatService?.dispose();
+    }
+    // Reset WebSocketService state for single-player mode
+    if (widget.isSinglePlayer) {
+      ws.reset(); // Add a reset method in WebSocketService to clear its state
     }
     _showInterstitialAd();
     Navigator.pushReplacement(
@@ -1175,6 +1177,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     required Color color,
     bool isError = false,
   }) {
+    if (!mounted) return; // Ensure the widget is still mounted
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -3423,7 +3426,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
-                                            'ID: ${widget.gameId}',
+                                            widget.isSinglePlayer ? 'Single Player Mode' : 'Multiplayer Mode',
                                             style: const TextStyle(
                                               fontFamily: "Poppins",
                                               color: Colors.black,
@@ -4384,4 +4387,5 @@ class _AnimatedDotsState extends State<AnimatedDots>
     );
   }
 }
+
 

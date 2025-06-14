@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:begger_card_game/widgets/floating_particles.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -312,7 +313,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                     cursor: SystemMouseCursors.click,
                     onEnter: (_) => setState(() => _isHovered = true),
                     onExit: (_) => setState(() => _isHovered = false),
-                    child: Switch(
+                    child: CupertinoSwitch(
                       value: isSinglePlayer,
                       onChanged: (value) {
                         setState(() {
@@ -328,8 +329,9 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
                           }
                         });
                       },
-                      activeColor: Colors.amber.shade600,
-                      activeTrackColor: Colors.amber.shade200,
+                      activeColor: Colors.amber.shade800,
+                      trackColor: Colors.blue.shade900,
+                      thumbColor: Colors.white,
                     ),
                   ),
                 ),
@@ -418,17 +420,17 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
           fillColor: isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
         ),
         SizedBox(height: isLargeScreen ? 24 : 16),
-        CustomTextField(
-          controller: _gameIdController,
-          hint: 'Game ID',
-          fillColor: isSinglePlayer ? Colors.amber.shade50 : Colors.blue.shade50,
-          // autoplay mode: Make game ID uneditable in single-player mode
-          isReadOnly: isSinglePlayer,
-          suffixIcon: !isSinglePlayer ? _buildCopyButton() : null,
-        ),
+        if (!isSinglePlayer)
+          CustomTextField(
+            controller: _gameIdController,
+            hint: 'Game ID',
+            fillColor: Colors.blue.shade50,
+            isReadOnly: false,
+            suffixIcon: _buildCopyButton(),
+          ),
         // autoplay mode: Hide instruction text in single-player mode
         if (!isSinglePlayer) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: isLargeScreen ? 0 : 12),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
@@ -461,7 +463,7 @@ class _LobbyScreenState extends State<LobbyScreen> with SingleTickerProviderStat
   // autoplay mode: Add bot settings UI
   List<Widget> _buildBotSettings(bool isLargeScreen) {
     return [
-      SizedBox(height: isLargeScreen ? 24 : 16),
+      SizedBox(height: isLargeScreen ? 16 : 8),
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

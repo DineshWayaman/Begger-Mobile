@@ -287,6 +287,17 @@ class WebSocketService with ChangeNotifier {
     });
   }
 
+  void reset() {
+    game = null;
+    error = null;
+    gameOverSummary = null;
+    onDismissDialog = null;
+    onTurnTimerStart = null;
+    socket.off('gameEnded');
+    socket.off('gameRestarted');
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     socket.dispose();

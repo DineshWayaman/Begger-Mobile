@@ -11,9 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/voice_chat_service.dart';
+import '../services/websocket.dart';
 import '../widgets/animated_button.dart';
 import '../widgets/enhanced_glow_widget.dart';
 import '../widgets/floating_particles.dart';
@@ -53,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _checkAndPromptForName();
     listenToConnectionChanges();
     _initializeAnimations();
+    // Reset WebSocketService state to avoid lingering game data
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.reset(); // Add a reset method in WebSocketService to clear its state
     _voiceChatService?.dispose();
   }
 
